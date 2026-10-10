@@ -1,0 +1,80 @@
+{
+  "personal_info": {
+    "first_name": "Max",
+    "last_name": "Mustermann",
+    "full_name": "Max Mustermann",
+    "gender": "Männlich",
+    "salutation": "Herr",
+    "default_password": "Candidate@Karriere2026!",
+    "email": "candidate@example.com",
+    "phone": "+49 170 0000000",
+    "expected_salary": "52.000 €",
+    "preferred_subjects": ["Informatik", "Mathematik", "Programmierung", "Python"],
+    "teaching_languages": ["Deutsch", "Englisch"],
+    "address": {
+      "street": "Musterstrasse 1",
+      "postal_code": "10115",
+      "city": "Berlin",
+      "country": "Deutschland"
+    },
+    "links": {
+      "portfolio": "https://example.com/portfolio",
+      "linkedin": "https://www.linkedin.com/in/example-profile",
+      "github": "https://github.com/example"
+    }
+  },
+  "education": {
+    "degree": "Bachelor of Science",
+    "field": "Angewandte Informatik",
+    "university": "Hochschule Musterstadt",
+    "period": "04/2022 – 02/2027",
+    "status": "Immatrikulierter Student"
+  },
+  "languages": {
+    "german": "Sehr gut / Fließend (C1)",
+    "french": "Grundkenntnisse",
+    "english": "Fließend (B2)"
+  },
+  "key_experience": [
+    {
+      "company": "Tech Company",
+      "role": "Praktikum (Softwareentwicklung & DevOps)",
+      "period": "09/2025 – 08/2026",
+      "skills": ["Python", "SQL", "Docker", "CI/CD"]
+    }
+  ],
+  "documents": {
+    "cv": "documents/cv.pdf",
+    "anschreiben": "documents/anschreiben.pdf",
+    "notenspiegel": "documents/notenspiegel.pdf",
+    "immatrikulation": "documents/immatrikulationsbescheinigung.pdf",
+    "zeugnisse": "documents/zeugnisse.pdf"
+  },
+  "candidate_knowledge": {
+    "salutation": "Herr",
+    "country": "Deutschland",
+    "country_dial_code": "Deutschland (49)",
+    "status": "Immatrikulierter Student",
+    "is_mandatory_internship": true,
+    "mandatory_internship_german": "Ja",
+    "internship_duration": "5–6 Monate",
+    "start_availability": "Ab sofort / Nach Absprache",
+    "mobility_locations": "Deutschland (mobil & flexibel)",
+    "expected_salary": "52.000 €",
+    "languages": {
+      "german": {
+        "level_name": "Fachkundige Sprachkenntnisse",
+        "cefr": "C1"
+      },
+      "english": {
+        "level_name": "Gute Kenntnisse",
+        "cefr": "B2"
+      }
+    },
+    "work_permit": {
+      "has_valid_permit": true
+    },
+    "talent_pool_consent": true,
+    "privacy_consent": true
+  }
+}

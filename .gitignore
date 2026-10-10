@@ -1,0 +1,59 @@
+# ==============================================================================
+# SECRETS & CREDENTIALS (CRITICAL - NEVER COMMIT)
+# ==============================================================================
+.env
+.env.*
+!.env.example
+client_secret_*.json
+credentials*.json
+token*.json
+service_account*.json
+*.pem
+*.key
+
+# ==============================================================================
+# PERSONAL CANDIDATE DATA & REAL PDF DOCUMENTS
+# ==============================================================================
+profil.json
+!profil.example.json
+documents/*.pdf
+documents/*.PDF
+*.pdf
+*.PDF
+
+# ==============================================================================
+# BROWSER SESSIONS, COOKIES & SCREENSHOTS
+# ==============================================================================
+browser_profile/
+screenshots/
+documents/screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# ==============================================================================
+# PYTHON ENVIRONMENTS & CACHES
+# ==============================================================================
+venv/
+.venv/
+env/
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+
+# ==============================================================================
+# SCRATCH, EXPLORATION & TEMPORARY FILES
+# ==============================================================================
+exploration_agents/
+scratch/
+.tempmediaStorage/
+.user_uploaded/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

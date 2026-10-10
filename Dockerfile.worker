@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
+
+WORKDIR /app
+
+# Copie des dépendances
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copie du code et des dossiers
+COPY worker_api.py .
+COPY profil.json .
+COPY documents/ ./documents/
+
+EXPOSE 8000
+
+# Lancement en mode headless par défaut sur un serveur
+CMD ["uvicorn", "worker_api:app", "--host", "0.0.0.0", "--port", "8000"]
