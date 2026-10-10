@@ -283,14 +283,14 @@ AUFGABEN:
 3. Verfasse ein maßgeschneidertes, hochprofessionelles deutsches Anschreiben (DIN 5008 Standard), das {c_name}s reale Erfahrungen (PWO AG, Bosch-Projekt, Python/DevOps) präzise auf die Anforderungen der Stelle abbildet.
 
 Antworte STRENG als valides JSON-Objekt in diesem Format:
-{
+{{
   "company_name": "...",
   "job_title": "...",
   "apply_url": "...",
   "score": 85,
   "begruendung": "...",
   "anschreiben": "Sehr geehrte Damen und Herren,\\n\\n..."
-}
+}}
 """
 
     parts = [{"text": prompt}]
