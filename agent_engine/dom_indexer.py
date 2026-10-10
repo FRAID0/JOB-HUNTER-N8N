@@ -112,8 +112,14 @@ JS_INDEXER_SCRIPT = """
                     text = groupQuestion;
                 }
             } else {
-                if (!text && fieldLabel) {
-                    text = fieldLabel;
+                if (tag === 'select') {
+                    if (fieldLabel) {
+                        text = fieldLabel + ' ' + text;
+                    }
+                } else {
+                    if (!text && fieldLabel) {
+                        text = fieldLabel;
+                    }
                 }
                 if (!text) {
                     const container = el.closest('.form-group, .field, [class*="form-row"], tr, div');

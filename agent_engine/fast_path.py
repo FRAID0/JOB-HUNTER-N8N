@@ -7,6 +7,7 @@ Level 1 - Smart DOM Heuristics: Geburtsdatum, LinkedIn, Eintrittstermin, Erfahru
 """
 import os
 import re
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from .action_schema import Action, ActionType, IndexedElement
 from .document_hub import DocumentHub
@@ -23,7 +24,9 @@ LEVEL_0_PATTERNS = {
     "internship_duration": [r"dauer.*praktikum", r"praktikumsdauer", r"duration"],
     "street": [r"stra(ss|ß)e", r"street", r"rue", r"address[\s_-]?line"],
     "zip": [r"plz", r"postleitzahl", r"zip", r"postal[\s_-]?code", r"code[\s_-]?postal"],
-    "city": [r"stadt", r"ort", r"city", r"ville", r"wohnort"],
+    "city": [r"stadt", r"ort", r"city", r"ville"],
+    "start_date": [r"available", r"verf(ü|ue)g", r"eintritt", r"start[\s_-]?date", r"ab\s+wann", r"disponib"],
+    "salary": [r"gehalt", r"salary", r"verg(ü|ue)tung", r"remuneration", r"stundenlohn", r"compensation"],
     "cv_upload": [r"lebenslauf", r"cv", r"resume", r"curriculum", r"bewerbungsunterlagen"],
 }
 
@@ -32,7 +35,7 @@ LEVEL_1_PATTERNS = {
     "linkedin": [r"linkedin", r"profil[\s_-]?link"],
     "github": [r"github", r"portfolio"],
     "birthdate": [r"geburtsdatum", r"birth[\s_-]?date", r"date\s+de\s+naissance"],
-    "start_date": [r"eintritt", r"start[\s_-]?date", r"verf(ü|ue)gbarkeit", r"verf(ü|ue)gbar", r"ab\s+wann", r"disponibilit(é|e)"],
+    "start_date": [r"available", r"eintritt", r"start[\s_-]?date", r"verf(ü|ue)g", r"ab\s+wann", r"disponibilit(é|e)"],
     "salary": [r"gehalt", r"salary", r"verg(ü|ue)tung", r"remuneration", r"stundenlohn", r"compensation"],
     "experience_years": [r"berufserfahrung", r"years\s+of\s+experience", r"ann(é|e)es\s+d'exp(é|e)rience"],
 }
@@ -159,6 +162,9 @@ class FastPathEngine:
 
             # --- LEVEL 0: Pill / Option Buttons (Subjects, Languages, Preferences) ---
             if tag == "button" and not el.is_terminal and not el.is_selected:
+                btn_class = str(el.attributes.get("class", "")).lower()
+                if any(ign in btn_class for ign in ["localeswitcher", "language", "sprachauswahl", "header", "nav", "dropdown"]):
+                    continue
                 btn_txt = el.text.strip()
                 if btn_txt and not any(nav in btn_txt.lower() for nav in ["weiter", "zurück", "abbrechen", "schritt", "next", "continue", "speichern"]):
                     subj_targets = [s.lower() for s in self.profile.get("preferred_subjects", [])]
@@ -396,6 +402,16 @@ class FastPathEngine:
             return cand_k.get("mobility_locations") or "Künzelsau / Flexibel"
         if field_key == "internship_duration":
             return cand_k.get("internship_duration") or "5–6 Monate"
+        if field_key == "start_date":
+            from datetime import datetime
+            now = datetime.now()
+            if now.month == 12:
+                next_month = datetime(now.year + 1, 1, 1)
+            else:
+                next_month = datetime(now.year, now.month + 1, 1)
+            return next_month.strftime("%d.%m.%Y")
+        if field_key == "salary":
+            return p.get("expected_salary") or cand_k.get("expected_salary") or "52.000 €"
         return None
 
     def _resolve_l1_value(self, field_key: str) -> Optional[str]:
