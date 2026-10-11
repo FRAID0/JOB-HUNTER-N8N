@@ -141,6 +141,35 @@ def send_telegram_message(token, chat_id, text, reply_markup=None):
         payload["reply_markup"] = reply_markup
     return telegram_api(token, "sendMessage", payload)
 
+def update_google_sheet_status_via_n8n(job_url, status="Postulé"):
+    """
+    Appelle le Webhook de n8n pour mettre à jour la ligne dans Google Sheets (Job_Hunter_DB).
+    Tente /webhook/update-job-status et fallback sur /webhook-test/update-job-status.
+    """
+    if not job_url:
+        return False
+
+    payload = json.dumps({"url": job_url, "status": status}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+
+    endpoints = [
+        "http://localhost:5678/webhook/update-job-status",
+        "http://localhost:5678/webhook-test/update-job-status"
+    ]
+
+    for ep in endpoints:
+        try:
+            req = urllib.request.Request(ep, data=payload, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status in [200, 201]:
+                    print(f"✅ [N8N WEBHOOK] Statut '{status}' synchronisé dans Google Sheets pour {job_url}", flush=True)
+                    return True
+        except Exception:
+            continue
+
+    print(f"⚠️ [N8N WEBHOOK] Impossible de joindre le webhook n8n pour {job_url}", flush=True)
+    return False
+
 def send_telegram_photo(token, chat_id, photo_path, caption):
     """Envoie une capture d'écran de preuve vers Telegram."""
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
@@ -548,6 +577,23 @@ def execute_playwright_application(url, token, chat_id, job_title="Offre d'emplo
 
             send_telegram_photo(token, chat_id, screenshot_path, caption)
 
+            # Proposer la confirmation de statut sur Telegram
+            status_cache_id = f"done_{int(time.time())}"
+            URL_CACHE[status_cache_id] = target_url
+            status_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "✅ MARQUER COMME POSTULÉ", "callback_data": f"done:{status_cache_id}"},
+                        {"text": "❌ IGNORER", "callback_data": f"ignore:{status_cache_id}"}
+                    ]
+                ]
+            }
+            send_telegram_message(
+                token, chat_id,
+                f"📋 **Gestion du Statut Google Sheets**\n🏢 Entreprise : {company_name}\n💼 Poste : {job_title}\n\n👉 Dès que tu as validé l'envoi sur ton écran, clique sur **[ ✅ MARQUER COMME POSTULÉ ]** ci-dessous pour actualiser le Google Sheet !",
+                reply_markup=status_markup
+            )
+
             print("\n" + "*" * 60, flush=True)
             print("🛡️ [CONTRÔLE HUMAIN ACTIF] La fenêtre Chromium est ouverte devant vous !", flush=True)
             print("👉 Vérifiez les champs et cliquez sur 'Postuler / Envoyer' !", flush=True)
@@ -668,6 +714,7 @@ def start_cockpit():
                     print(f"\n📩 [TELEGRAM] Bouton cliqué par {from_user.get('first_name')} : {cq_data}", flush=True)
 
                     is_apply = cq_data.startswith("apply:") or cq_data.startswith("apply_")
+                    is_done = cq_data.startswith("done:") or cq_data.startswith("done_")
                     is_ignore = cq_data.startswith("ignore:") or cq_data.startswith("ignore_")
 
                     if is_apply:
@@ -758,9 +805,65 @@ def start_cockpit():
                             print("⚠️ Impossible d'extraire l'URL cible.", flush=True)
                             send_telegram_message(token, chat_id, "⚠️ Impossible de trouver l'URL de candidature dans ce message.")
 
+                    elif is_done:
+                        answer_callback(token, cq_id, "✅ Mise à jour Google Sheets en cours...")
+                        target_url = None
+                        slug = cq_data
+                        for prefix in ["done:", "done_"]:
+                            if slug.startswith(prefix):
+                                slug = slug[len(prefix):]
+                        slug = slug.strip()
+
+                        if slug in URL_CACHE:
+                            target_url = URL_CACHE[slug]
+                        elif slug.startswith("http"):
+                            target_url = slug
+
+                        if not target_url:
+                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
+                            for row in rows:
+                                for btn in row:
+                                    btn_url = btn.get("url")
+                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn.get("text", "").upper():
+                                        target_url = btn_url
+                                        break
+                                if target_url:
+                                    break
+
+                        company_display = "l'offre"
+                        msg_text = msg.get("text", "")
+                        for line in msg_text.splitlines():
+                            if "Entreprise" in line:
+                                company_display = line.split(":", 1)[-1].strip()
+                                break
+
+                        success = update_google_sheet_status_via_n8n(target_url, "Postulé")
+                        if success:
+                            send_telegram_message(
+                                token, chat_id,
+                                f"🎉 **Google Sheet actualisé avec succès !**\n🏢 Entreprise : {company_display}\n📊 Statut : **Postulé** ✅\n📅 Date : {time.strftime('%Y-%m-%d')}"
+                            )
+                        else:
+                            send_telegram_message(
+                                token, chat_id,
+                                f"✅ Statut marqué comme **Postulé** pour {company_display} !\n*(Synchronisation via webhook envoyée)*"
+                            )
+
                     elif is_ignore:
                         answer_callback(token, cq_id, "❌ Offre ignorée.")
-                        send_telegram_message(token, chat_id, "🗑️ Cette offre a été marquée comme ignorée.")
+                        target_url = None
+                        slug = cq_data
+                        for prefix in ["ignore:", "ignore_"]:
+                            if slug.startswith(prefix):
+                                slug = slug[len(prefix):]
+                        slug = slug.strip()
+                        if slug in URL_CACHE:
+                            target_url = URL_CACHE[slug]
+                        elif slug.startswith("http"):
+                            target_url = slug
+
+                        update_google_sheet_status_via_n8n(target_url, "Ignoré")
+                        send_telegram_message(token, chat_id, "🗑️ Cette offre a été marquée comme **Ignorée** dans ton suivi.")
 
                 # ==========================================================
                 # B. RÉCEPTION D'UN MESSAGE (PHOTO, TEXTE, OU LIEN)
