@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Cockpit Telegram Universel (100% Automatique & Multimodal)
-Auteur: Wilfried Manfouo Fomekong
+Auteur: Open Source Contributor
 Description:
 1. Reçoit et traite TOUS les types d'entrées depuis Telegram :
    - Un LIEN (URL) direct vers une offre (Greenhouse, Lever, LinkedIn, Indeed, etc.)
@@ -287,11 +287,16 @@ def analyze_job_with_gemini(text_content=None, image_path=None, profile=None):
 
     prof = load_profile()
     p_info = prof.get("personal_info", prof)
-    c_name = p_info.get("full_name", "Wilfried Manfouo Fomekong")
+    c_name = p_info.get("full_name", "Max Mustermann")
     c_phone = p_info.get("phone", "+49 170 0000000")
-    c_email = p_info.get("email", "wfomekong0@gmail.com")
+    c_email = p_info.get("email", "candidate@example.com")
     addr = p_info.get("address", {})
-    c_addr_str = f"{addr.get('street', '')}, {addr.get('postal_code', '')} {addr.get('city', '')}".strip(", ")
+    c_addr_str = f"{addr.get('street', 'Musterstraße 1')}, {addr.get('postal_code', '10115')} {addr.get('city', 'Berlin')}".strip(", ")
+    links = p_info.get("links", {})
+    c_portfolio = links.get("portfolio", "https://example.com/portfolio")
+    c_github = links.get("github", "https://github.com/example-profile")
+    c_study = p_info.get("education_summary", "B.Sc. Angewandte Informatik (abschlussnah)")
+    c_langs = p_info.get("languages_summary", "Deutsch (verhandlungssicher / C1), Französisch (Muttersprache), Englisch (B1-B2)")
 
     prompt = f"""Du bist ein erstklassiger deutscher Karriereberater und Senior IT-Headhunter.
 Analysiere folgende Stellenausschreibung für {c_name} und erstelle ein überzeugendes deutsches Anschreiben (DIN 5008 Standard):
@@ -299,9 +304,9 @@ Analysiere folgende Stellenausschreibung für {c_name} und erstelle ein überzeu
 MASTER-PROFIL DES BEWERBERS (REALE PROJEKTE & KOMPETENZEN):
 - Name: {c_name}
 - Kontakt: {c_phone} | {c_email} | {c_addr_str}
-- Online-Portfolio: https://portfolio-pro-fraid.vercel.app/de | GitHub: https://github.com/FRAID0
-- Studium: B.Sc. Angewandte Informatik an der Hochschule Worms (abschlussnah).
-- Sprachen: Deutsch (verhandlungssicher / C1, TestDaF 4), Französisch (Muttersprache), Englisch (fließend im technischen Umfeld).
+- Online-Portfolio: {c_portfolio} | GitHub: {c_github}
+- Studium: {c_study}
+- Sprachen: {c_langs}
 
 TECH-STACK & PROJEKT-NACHWEISE:
 1. Backend & Web-APIs:
@@ -322,15 +327,15 @@ STRIKTE REGELN FÜR DAS ANSCHREIBEN:
    - Verbinde Backend- und Datenkompetenzen (FastAPI/Python, Kafka, PostgreSQL) logisch mit modernen TypeScript/NestJS-Architekturen und Frontend (React/Tailwind).
    - Verankere jede Kernanforderung der Stellenanzeige in einem realen Projekt (PWO AG, Bosch-Projekt, Portfolio-Webplattformen).
 3. PFLICHT-REFERENZ AUF DAS PORTFOLIO:
-   - Binde den Link zum Online-Portfolio (https://portfolio-pro-fraid.vercel.app/de) zwingend und natürlich im 2. Absatz ein (z. B.: "Einen detaillierten Einblick in meine bisherigen Architekturen und Projekte finden Sie auf meiner Portfolio-Website unter https://portfolio-pro-fraid.vercel.app/de").
+   - Binde den Link zum Online-Portfolio ({c_portfolio}) zwingend und natürlich im 2. Absatz ein (z. B.: "Einen detaillierten Einblick in meine bisherigen Architekturen und Projekte finden Sie auf meiner Portfolio-Website unter {c_portfolio}").
 4. AUFBAU & FORM:
    - 3 bis 4 prägnante Absätze, Anrede "Sehr geehrte Damen und Herren" (oder Name falls bekannt), klare Betreffzeile ("Bewerbung als [job_title]"), Abschluss mit "Mit freundlichen Grüßen".
 5. STRIKTE TRENNUNG DER PROJEKTE (KEINE FALSCHEN ZUORDNUNGEN):
-   - Bosch-Kooperation: Praxisnahes Hochschulprojekt der Hochschule Worms in Kooperation mit der Bosch-Gruppe (Echtzeit-Telemetriedaten mit FastAPI, Apache Kafka und QuestDB). Betone: Es war ein praxisnahes Studienprojekt in Kooperation mit Bosch, keine direkte Festanstellung!
+   - Bosch-Kooperation: Praxisnahes Hochschulprojekt in Kooperation mit der Bosch-Gruppe (Echtzeit-Telemetriedaten mit FastAPI, Apache Kafka und QuestDB). Betone: Es war ein praxisnahes Studienprojekt in Kooperation mit Bosch, keine direkte Festanstellung!
    - PWO AG: Praktikum & Bachelorarbeit (Prozessautomatisierung, relationale SQL-Datenstrukturen, SCADA-Systeme und CI/CD-Pipelines mit Azure DevOps, YAML und Python). Erwähne NIEMALS Kafka und NIEMALS Docker bei der PWO AG!
-   - TOP-Projekt (Hochschule Worms): Cloud-Webanwendung zur Workshop-Verwaltung mit Node.js, Express, PostgreSQL, Sequelize und Deployment auf AWS EC2.
+   - TOP-Projekt: Cloud-Webanwendung zur Workshop-Verwaltung mit Node.js, Express, PostgreSQL, Sequelize und Deployment auf AWS EC2.
    - Containerisierung mit Docker & Docker Compose: In universitären IIoT-Projekten (z. B. TOP-Projekt), Microservices und Web-Plattform-Deployments.
-   - TypeScript / NestJS / React: Web-Plattformen und modulare APIs im Portfolio (https://portfolio-pro-fraid.vercel.app/de).
+   - TypeScript / NestJS / React: Web-Plattformen und modulare APIs im Portfolio ({c_portfolio}).
 
 AUFGABEN:
 1. Extrahiere den Unternehmensnamen (company_name), die genaue Stellenbezeichnung (job_title) und die Bewerbungs-URL (apply_url) falls sichtbar.
@@ -616,7 +621,7 @@ def execute_playwright_application(url, token, chat_id, job_title="Offre d'emplo
         except Exception as e:
             print(f"[ERREUR PLAYWRIGHT] {e}", flush=True)
             send_telegram_message(token, chat_id, f"⚠️ Note : {e}\n👀 La fenêtre Chromium reste ouverte sur votre écran pour finaliser la candidature.")
-            # Laisser la fenêtre ouverte pour Wilfried même après une exception
+            # Laisser la fenêtre ouverte pour l'utilisateur même après une exception
             start_time = time.time()
             while time.time() - start_time < 600:
                 try:
@@ -812,7 +817,7 @@ def start_cockpit():
                                             ],
                                             [
                                                 {"text": "🌐 VOIR L'OFFRE EN LIGNE", "url": target_url},
-                                                {"text": "💻 MON PORTFOLIO", "url": "https://portfolio-pro-fraid.vercel.app/de"}
+                                                {"text": "💻 MON PORTFOLIO", "url": load_profile().get("personal_info", {}).get("links", {}).get("portfolio", "https://example.com/portfolio")}
                                             ]
                                         ]
                                     }
@@ -1000,15 +1005,22 @@ def start_cockpit():
                             continue
 
                         elif text.startswith("/profil") or text == "👤 Mon Profil & CV":
+                            cand_p = load_profile()
+                            p_inf = cand_p.get("personal_info", cand_p)
+                            c_links = p_inf.get("links", {})
+                            c_port = c_links.get("portfolio", "https://example.com/portfolio")
+                            c_edu = cand_p.get("education", {}).get("degree", "B.Sc. Angewandte Informatik")
+                            c_exp = cand_p.get("candidate_knowledge", {}).get("key_projects", "Projets d'ingénierie & automatisation")
+                            c_lng = p_inf.get("languages_summary", "Allemand, Français, Anglais")
                             send_telegram_message(
                                 token, chat_id,
                                 f"👤 **PROFIL CANDIDAT ACTIF**\n\n"
                                 f"• **Nom** : {candidate_name}\n"
-                                f"• **Formation** : B.Sc. Angewandte Informatik (Hochschule Worms)\n"
-                                f"• **Expériences** : PWO AG (DevOps & Automatisation) | Projet Bosch (FastAPI & Kafka)\n"
-                                f"• **Langues** : Allemand (Fließend TestDaF 4), Français (Natif), Anglais (B1)\n"
+                                f"• **Formation** : {c_edu}\n"
+                                f"• **Expériences** : {c_exp}\n"
+                                f"• **Langues** : {c_lng}\n"
                                 f"• **CV configuré** : `d:/N8N/documents/cv.pdf` ✅\n"
-                                f"• **Portfolio** : https://portfolio-pro-fraid.vercel.app/de\n\n"
+                                f"• **Portfolio** : {c_port}\n\n"
                                 "👉 Tu peux m'envoyer n'importe quelle offre pour postuler !",
                                 reply_markup=TACTILE_KEYBOARD
                             )

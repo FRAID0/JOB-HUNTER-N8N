@@ -18,7 +18,7 @@ class TestActionValidator(unittest.TestCase):
         ]
 
     def test_valid_type_action(self):
-        action = Action(action_type=ActionType.TYPE, element_id=1, value="Wilfried")
+        action = Action(action_type=ActionType.TYPE, element_id=1, value="TestCandidate")
         res = self.validator.validate(action, self.elements)
         self.assertTrue(res.is_valid)
         self.assertFalse(res.requires_human)

@@ -9,12 +9,12 @@ from agent_engine.fast_path import FastPathEngine
 class TestFastPathEngine(unittest.TestCase):
     def setUp(self):
         self.profile = {
-            "first_name": "Wilfried",
-            "last_name": "Manfouo Fomekong",
-            "email": "wfomekong1@gmail.com",
+            "first_name": "Alex",
+            "last_name": "Dupont",
+            "email": "alex.dupont@example.com",
             "phone": "+49 176 12345678",
-            "city": "Wuppertal",
-            "linkedin": "https://linkedin.com/in/wilfried",
+            "city": "Berlin",
+            "linkedin": "https://linkedin.com/in/alexdupont",
             "birthdate": "15.04.1994",
         }
         self.cv_path = "d:/N8N/documents/cv.pdf"
@@ -34,9 +34,9 @@ class TestFastPathEngine(unittest.TestCase):
 
         # Check values
         actions_by_id = {a.element_id: a for a in actions}
-        self.assertEqual(actions_by_id[1].value, "Wilfried")
-        self.assertEqual(actions_by_id[2].value, "Manfouo Fomekong")
-        self.assertEqual(actions_by_id[3].value, "wfomekong1@gmail.com")
+        self.assertEqual(actions_by_id[1].value, "Alex")
+        self.assertEqual(actions_by_id[2].value, "Dupont")
+        self.assertEqual(actions_by_id[3].value, "alex.dupont@example.com")
         self.assertEqual(actions_by_id[4].value, "+49 176 12345678")
         self.assertEqual(actions_by_id[5].action_type, ActionType.UPLOAD)
         self.assertEqual(str(actions_by_id[5].value).replace('\\', '/').lower(), str(self.cv_path).replace('\\', '/').lower())
@@ -50,7 +50,7 @@ class TestFastPathEngine(unittest.TestCase):
         actions = self.fast_path.plan_fast_actions(elements)
         self.assertEqual(len(actions), 2)
         actions_by_id = {a.element_id: a for a in actions}
-        self.assertEqual(actions_by_id[10].value, "https://linkedin.com/in/wilfried")
+        self.assertEqual(actions_by_id[10].value, "https://linkedin.com/in/alexdupont")
         self.assertEqual(actions_by_id[11].value, "15.04.1994")
 
     def test_skips_already_filled_inputs(self):

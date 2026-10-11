@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Copilote de Candidature Playwright avec Cerveau IA Gemini (Human-in-the-Loop)
-Auteur: Wilfried Manfouo Fomekong
+Auteur: Open Source Contributor
 Description: 
 - Génération d'Anschreiben au format DIN 5008 (PDF professionnel allemand).
 - Remplissage automatique intelligent des champs standards (coordonnées, liens).
@@ -60,18 +60,21 @@ def get_gemini_api_key():
 def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Developer", company_name="Unternehmen"):
     """
     Compile une lettre de motivation en PDF respectant la disposition demandée
-    par Wilfried (Bloc candidat en haut à droite, Entreprise à gauche, date à droite au format DD.MM.YYYY, etc.)
+    (Bloc candidat en haut à droite, Entreprise à gauche, date à droite au format DD.MM.YYYY, etc.)
     et l'enregistre dans documents/anschreiben.pdf via Playwright.
     """
     profile = load_profile()
     p_info = profile.get("personal_info", {})
     addr = p_info.get("address", {})
 
-    sender_name = p_info.get("full_name", "Wilfried MANFOUO FOMEKONG")
+    sender_name = p_info.get("full_name", "Candidat")
     sender_phone = p_info.get("phone", "+49 170 0000000")
     sender_email = p_info.get("email", "candidate@example.com")
     sender_street = addr.get("street", "Musterstrasse 1")
     sender_zip_city = f"{addr.get('postal_code', '10115')} {addr.get('city', 'Berlin')}"
+    links = p_info.get("links", {})
+    sender_portfolio = links.get("portfolio", "https://example.com/portfolio")
+    sender_github = links.get("github", "https://github.com/example-profile")
 
     # Date du jour au format JJ.MM.AAAA (ex: 03.10.2026)
     current_date = datetime.now().strftime("%d.%m.%Y")
@@ -102,7 +105,7 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
         closing_html = f"""
   <div class="closing-block">
     Mit freundlichen Grüßen,<br><br>
-    <div class="signature-name">Wilfried Manfouo Fomekong</div>
+    <div class="signature-name">{sender_name}</div>
   </div>"""
 
     html_content = f"""<!DOCTYPE html>
@@ -186,7 +189,7 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
     <div class="sender-name"><strong>{sender_name}</strong></div>
     <div class="sender-address">{sender_street}, {sender_zip_city}</div>
     <div class="sender-contact">{sender_phone} | <a href="mailto:{sender_email}">{sender_email}</a></div>
-    <div class="sender-contact">Portfolio: <a href="https://portfolio-pro-fraid.vercel.app/de">portfolio-pro-fraid.vercel.app/de</a> | GitHub: <a href="https://github.com/FRAID0">github.com/FRAID0</a></div>
+    <div class="sender-contact">Portfolio: <a href="{sender_portfolio}">{sender_portfolio}</a> | GitHub: <a href="{sender_github}">{sender_github}</a></div>
   </div>
 
   <div class="meta-row">
@@ -269,7 +272,15 @@ def ask_gemini_brain(fields, profile, job_title=""):
     if not key or not fields:
         return {}
 
-    prompt = f"""Tu es le cerveau d'automatisation de candidature pour Wilfried Manfouo Fomekong (étudiant en Informatique appliquée / Python / DevOps).
+    p_info = profile.get("personal_info", profile)
+    c_name = p_info.get("full_name", "le candidat")
+    cand_k = profile.get("candidate_knowledge", {})
+    work_auth = cand_k.get("work_authorization", "Titre de séjour étudiant / Permis de travail en règle")
+    langs = cand_k.get("languages", {})
+    german_lvl = langs.get("german", "Fließend / Sehr gut / C1")
+    english_lvl = langs.get("english", "Grundlegend / B1")
+
+    prompt = f"""Tu es le cerveau d'automatisation de candidature pour {c_name} (étudiant / profil Tech & DevOps).
 Voici son profil complet :
 {json.dumps(profile, ensure_ascii=False, indent=2)}
 
@@ -279,12 +290,12 @@ Voici la liste des champs ou questions détectés sur la page web :
 {json.dumps(fields, ensure_ascii=False, indent=2)}
 
 RÈGLES IMPORTANTES :
-1. Pour l'Allemand : Wilfried parle Allemand couramment/très bien (Fließend / Sehr gut / C1-C2).
-2. Pour l'Anglais : Wilfried a un niveau technique de base (Grundlegend / Gut / B1). Sélectionne 'Grundlegend' si disponible.
+1. Pour l'Allemand : {c_name} a le niveau ({german_lvl}).
+2. Pour l'Anglais : {c_name} a le niveau ({english_lvl}). Sélectionne 'Grundlegend' si disponible.
 3. Pour la disponibilité : Généralement J+7 ou J+14 au format JJ.MM.AAAA (ex: dans 7 jours).
 4. Pour les menus déroulants (type 'select') : Choisis EXACTEMENT l'un des textes de la liste 'options'.
-5. Pour les questions de nationalité / permis de travail : Wilfried a un titre de séjour étudiant valide en Allemagne (Aufenthaltstitel / Arbeitserlaubnis für Werkstudenten vorhanden).
-6. Pour les questions Oui/Non (Ja/Nein) concernant les compétences qu'il possède (Python, Git, Docker, SQL, etc.), répondre 'Ja'.
+5. Pour les questions de nationalité / permis de travail : {work_auth}.
+6. Pour les questions Oui/Non (Ja/Nein) concernant les compétences possédées dans son profil, répondre 'Ja'.
 
 Renvoie STRICTEMENT un objet JSON valide associant chaque 'id' de champ à la valeur choisie.
 Exemple attendu :
@@ -307,7 +318,6 @@ Exemple attendu :
     except Exception as e:
         print(f"⚠️ [CERVEAU GEMINI] Erreur parsing JSON : {e}", flush=True)
         return {}
-        return {}
 
 def visual_qa_critique(screenshot_path, profile, job_title="Offre d'emploi"):
     """
@@ -324,7 +334,9 @@ def visual_qa_critique(screenshot_path, profile, job_title="Offre d'emploi"):
         with open(screenshot_path, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
 
-        prompt = f"""Tu es le superviseur qualité IA pour les candidatures de Wilfried Manfouo Fomekong.
+        p_info = profile.get("personal_info", profile)
+        c_name = p_info.get("full_name", "le candidat")
+        prompt = f"""Tu es le superviseur qualité IA pour les candidatures de {c_name}.
 Poste ciblé : {job_title}
 Analyse cette capture d'écran du navigateur après remplissage automatique :
 1. Y a-t-il encore un pop-up de cookies ou modal bloquant ?
@@ -977,10 +989,10 @@ def smart_fill(page, profile, cover_letter_text=None, job_title="Offre d'emploi"
             # GitHub
             (["input[name*='347499' i]", "input[id*='347499' i]", "input[placeholder*='GitHub' i]", 
               "input[name*='github' i]", "input[id*='github' i]"],
-             links.get("github", "https://github.com/FRAID0")),
+             links.get("github", "https://github.com/example-profile")),
             # LinkedIn
             (["input[name*='linkedin' i]", "input[id*='linkedin' i]", "input[placeholder*='LinkedIn' i]"],
-             links.get("linkedin") or p_info.get("linkedin") or os.environ.get("LINKEDIN_URL") or "https://www.linkedin.com/in/wilfried-manfouo-fomekong"),
+             links.get("linkedin") or p_info.get("linkedin") or os.environ.get("LINKEDIN_URL") or "https://www.linkedin.com/in/example-profile"),
             # Salaire / Gehaltsvorstellung
             (["input[name*='gehalt' i]", "input[id*='gehalt' i]", "input[placeholder*='Gehalt' i]", 
               "input[name*='salary' i]", "input[id*='salary' i]", "input[placeholder*='salary' i]"],

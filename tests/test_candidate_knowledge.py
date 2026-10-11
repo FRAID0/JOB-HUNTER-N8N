@@ -6,16 +6,16 @@ from agent_engine.fast_path import FastPathEngine
 
 class TestCandidateKnowledgeBase(unittest.TestCase):
     def setUp(self):
-        self.kb = CandidateKnowledgeBase(profile_path="d:/N8N/profil.json")
+        self.kb = CandidateKnowledgeBase(profile_path="d:/N8N/profil.example.json")
 
     def test_knowledge_base_loading(self):
-        self.assertEqual(self.kb.personal_info.get("first_name"), "Wilfried")
+        self.assertEqual(self.kb.personal_info.get("first_name"), "Max")
         self.assertEqual(self.kb.education.get("degree"), "Bachelor of Science")
         self.assertTrue(self.kb.knowledge.get("is_mandatory_internship"))
 
     def test_reasoning_prompt_generation(self):
         prompt = self.kb.to_reasoning_prompt(target_job="Praktikum IoT und KI")
-        self.assertIn("Wilfried Manfouo Fomekong", prompt)
+        self.assertIn("Max Mustermann", prompt)
         self.assertIn("Pflichtpraktikum", prompt)
         self.assertIn("5–6 Monate", prompt)
         self.assertIn("Sehr Gute Kenntnisse", prompt)
@@ -49,7 +49,7 @@ class TestCandidateKnowledgeBase(unittest.TestCase):
         actions = engine.plan_fast_actions(elements)
         # Should fill firstName
         type_actions = [a for a in actions if a.action_type == ActionType.TYPE]
-        self.assertTrue(any(a.element_id == 1 and a.value == "Wilfried" for a in type_actions))
+        self.assertTrue(any(a.element_id == 1 and a.value == "Max" for a in type_actions))
         # Should click Ja for Pflichtpraktikum (element 3)
         click_actions = [a for a in actions if a.action_type == ActionType.CLICK]
         self.assertTrue(any(a.element_id == 3 for a in click_actions))

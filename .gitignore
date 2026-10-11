@@ -12,10 +12,13 @@ service_account*.json
 *.key
 
 # ==============================================================================
-# PERSONAL CANDIDATE DATA & REAL PDF DOCUMENTS
+# PERSONAL CANDIDATE DATA & REAL PDF DOCUMENTS & WORKFLOWS
 # ==============================================================================
 profil.json
 !profil.example.json
+JOB Auto.json
+JOB_Auto_with_Loop.json
+!workflow_job_hunter.example.json
 documents/*.pdf
 documents/*.PDF
 *.pdf

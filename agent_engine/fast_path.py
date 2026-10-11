@@ -156,7 +156,7 @@ class FastPathEngine:
             if tag == "input" and el_type == "password":
                 el_ctx = f"{el.name} {el.placeholder} {el.aria_label}".lower()
                 if not any(ign in el_ctx for ign in ["current-password", "session_password", "login-password", "login_password"]):
-                    pwd = self.profile.get("default_password", "Wilfried@Karriere2026!")
+                    pwd = self.profile.get("default_password", "Candidate@Secure2026!")
                     actions.append(Action(
                         action_type=ActionType.TYPE,
                         element_id=el.id,
@@ -411,15 +411,15 @@ class FastPathEngine:
         addr = p.get("address", {})
         cand_k = self.profile.get("candidate_knowledge", {})
         if field_key == "first_name":
-            return p.get("first_name") or p.get("vorname") or "Wilfried"
+            return p.get("first_name") or p.get("vorname") or "Alex"
         if field_key == "last_name":
-            return p.get("last_name") or p.get("nachname") or "Manfouo Fomekong"
+            return p.get("last_name") or p.get("nachname") or "Dupont"
         if field_key == "full_name":
-            return p.get("full_name") or p.get("name") or "Wilfried Manfouo Fomekong"
+            return p.get("full_name") or p.get("name") or "Alex Dupont"
         if field_key == "email":
-            return p.get("email") or os.environ.get("CANDIDATE_EMAIL") or "wfomekong0@gmail.com"
+            return p.get("email") or os.environ.get("CANDIDATE_EMAIL") or "candidate@example.com"
         if field_key == "phone":
-            return p.get("phone") or p.get("telefon") or os.environ.get("CANDIDATE_PHONE") or "+49 15147049352"
+            return p.get("phone") or p.get("telefon") or os.environ.get("CANDIDATE_PHONE") or "+49 170 0000000"
         if field_key == "street":
             return addr.get("street") or p.get("street") or "Musterstrasse 1"
         if field_key == "zip":
@@ -427,7 +427,7 @@ class FastPathEngine:
         if field_key == "city":
             return addr.get("city") or p.get("city") or "Berlin"
         if field_key == "mobility":
-            return cand_k.get("mobility_locations") or "Künzelsau / Flexibel"
+            return cand_k.get("mobility_locations") or "Flexibel"
         if field_key == "internship_duration":
             return cand_k.get("internship_duration") or "5–6 Monate"
         if field_key == "start_date":
@@ -447,9 +447,9 @@ class FastPathEngine:
         links = p.get("links", {})
         cand_k = self.profile.get("candidate_knowledge", {})
         if field_key == "linkedin":
-            return links.get("linkedin") or p.get("linkedin") or os.environ.get("LINKEDIN_URL") or "https://www.linkedin.com/in/wilfried-manfouo-fomekong"
+            return links.get("linkedin") or p.get("linkedin") or os.environ.get("LINKEDIN_URL") or "https://www.linkedin.com/in/example-profile"
         if field_key == "github":
-            return links.get("github") or p.get("github") or "https://github.com/FRAID0"
+            return links.get("github") or p.get("github") or "https://github.com/example-profile"
         if field_key == "birthdate":
             return p.get("birthdate") or "01.01.1995"
         if field_key == "start_date":

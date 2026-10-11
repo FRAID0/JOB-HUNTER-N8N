@@ -62,9 +62,9 @@ class TestPlaywrightLocalE2E(unittest.TestCase):
                 f.write(b"%PDF-1.4 dummy cv content")
 
             profile = {
-                "first_name": "Wilfried",
-                "last_name": "Manfouo Fomekong",
-                "email": "wfomekong1@gmail.com",
+                "first_name": "Alex",
+                "last_name": "Dupont",
+                "email": "alex.dupont@example.com",
                 "phone": "+49 176 12345678",
             }
 
@@ -106,9 +106,9 @@ class TestPlaywrightLocalE2E(unittest.TestCase):
                 result = agent.run(goal="Complete application")
 
                 # 1. Verify Step 1 fields were populated by Fast-Path L0
-                self.assertEqual(page.locator("#vorname").input_value(), "Wilfried")
-                self.assertEqual(page.locator("#nachname").input_value(), "Manfouo Fomekong")
-                self.assertEqual(page.locator("#email").input_value(), "wfomekong1@gmail.com")
+                self.assertEqual(page.locator("#vorname").input_value(), "Alex")
+                self.assertEqual(page.locator("#nachname").input_value(), "Dupont")
+                self.assertEqual(page.locator("#email").input_value(), "alex.dupont@example.com")
 
                 # 2. Verify Step 2 was reached (Step 1 is hidden, Step 2 is displayed)
                 is_step2_visible = page.locator("#step-2").is_visible()

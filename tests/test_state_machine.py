@@ -29,7 +29,7 @@ class TestStateMachine(unittest.TestCase):
         sm.transition_to(ApplicationState.VALIDATION_REQUIRED, "Final submit button detected")
         self.assertEqual(sm.current_state, ApplicationState.VALIDATION_REQUIRED)
 
-        sm.transition_to(ApplicationState.HUMAN_APPROVED, "Wilfried clicked approve", approved_by="Wilfried")
+        sm.transition_to(ApplicationState.HUMAN_APPROVED, "User clicked approve", approved_by="User")
         self.assertEqual(sm.current_state, ApplicationState.HUMAN_APPROVED)
 
         sm.transition_to(ApplicationState.SUBMITTED, "Submitted")
