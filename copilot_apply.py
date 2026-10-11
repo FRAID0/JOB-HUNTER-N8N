@@ -183,9 +183,10 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
 </head>
 <body>
   <div class="sender-block">
-    <div class="sender-name">{sender_name}</div>
-    <div class="sender-contact">{sender_phone}, <a href="mailto:{sender_email}">{sender_email}</a></div>
+    <div class="sender-name"><strong>{sender_name}</strong></div>
     <div class="sender-address">{sender_street}, {sender_zip_city}</div>
+    <div class="sender-contact">{sender_phone} | <a href="mailto:{sender_email}">{sender_email}</a></div>
+    <div class="sender-contact">Portfolio: <a href="https://portfolio-pro-fraid.vercel.app/de">portfolio-pro-fraid.vercel.app/de</a> | GitHub: <a href="https://github.com/FRAID0">github.com/FRAID0</a></div>
   </div>
 
   <div class="meta-row">

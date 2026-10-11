@@ -124,6 +124,12 @@ class FastPathEngine:
                     already_handled_elements.add(el.id)
                     if is_cv:
                         self.uploaded_categories.add("cv")
+                    if "anschreiben" in doc_fname or "cover" in doc_fname:
+                        self.uploaded_categories.add("anschreiben")
+                    el_combined = f"{el.name or ''} {el.placeholder or ''} {el.aria_label or ''} {el.text or ''}".lower()
+                    if any(w in el_combined for w in ["andere", "sonstige", "optional", "other"]):
+                        self.uploaded_categories.add("andere")
+                    self.uploaded_categories.add(doc_fname)
                     continue
 
             # --- LEVEL 0: Textarea (Motivation / Kurz zu dir) ---
@@ -347,28 +353,50 @@ class FastPathEngine:
     def _resolve_file_upload(self, el: IndexedElement) -> Optional[str]:
         combined = f"{el.name or ''} {el.placeholder or ''} {el.aria_label or ''} {el.text or ''}".lower()
 
-        # Si c'est explicitement "Andere", "Sonstige", "Optional", ne JAMAIS renvoyer le CV !
-        if any(w in combined for w in ["andere", "sonstige", "optional", "weitere", "zusatz"]):
+        # Si c'est un champ additionnel ("Andere", "Sonstige", "Optional", "Other", "Weitere", etc.) :
+        # On téléverse la lettre de motivation personnalisée (anschreiben.pdf) si disponible, sinon les diplômes (zeugnisse).
+        if any(w in combined for w in ["andere", "sonstige", "optional", "weitere", "zusatz", "other"]):
+            if "andere" in self.uploaded_categories:
+                return None
             docs = self.profile.get("documents", {})
-            for key in ["arbeitszeugnis", "zeugnisse", "notenspiegel"]:
+            # 1. Priorité absolue : Anschreiben (lettre de motivation personnalisée DIN 5008)
+            ans = docs.get("anschreiben") or (Path(self.docs_dir) / "anschreiben.pdf")
+            if ans and os.path.exists(ans) and "anschreiben" not in self.uploaded_categories:
+                return str(Path(ans).resolve())
+            # 2. Deuxième choix : Zeugnisse / Notenspiegel (si pas d'anschreiben)
+            for key in ["zeugnisse", "notenspiegel"]:
                 target = docs.get(key)
-                if target and os.path.exists(target) and key not in self.uploaded_categories:
+                if target and os.path.exists(target) and "zeugnisse" not in self.uploaded_categories:
                     return str(Path(target).resolve())
             return None
 
         # 1. Primary: Semantic DocumentHub resolution across all indexed files
         resolved = self.doc_hub.resolve_document(combined)
         if resolved and resolved.exists():
-            return str(resolved.resolve())
+            fname = resolved.name.lower()
+            if "cv" in fname or "lebenslauf" in fname:
+                if "cv" in self.uploaded_categories:
+                    return None
+                return str(resolved.resolve())
+            elif fname not in self.uploaded_categories:
+                return str(resolved.resolve())
 
         # 2. Direct dictionary fallback pour Zeugnisse / Notenspiegel
         docs = self.profile.get("documents", {})
         if any(w in combined for w in ["zeugnis", "notenspiegel", "qualifikation", "transcript"]):
-            target = docs.get("zeugnisse") or docs.get("notenspiegel")
-            if target and os.path.exists(target):
-                return str(Path(target).resolve())
+            if "zeugnisse" not in self.uploaded_categories:
+                target = docs.get("zeugnisse") or docs.get("notenspiegel")
+                if target and os.path.exists(target):
+                    return str(Path(target).resolve())
 
-        # 3. CV UNIQUEMENT si le champ demande explicitement le CV et qu'il n'a pas encore été envoyé
+        # 3. Direct dictionary fallback pour Anschreiben
+        if any(w in combined for w in ["anschreiben", "cover", "motivation", "letter"]):
+            if "anschreiben" not in self.uploaded_categories:
+                ans = docs.get("anschreiben") or (Path(self.docs_dir) / "anschreiben.pdf")
+                if ans and os.path.exists(ans):
+                    return str(Path(ans).resolve())
+
+        # 4. CV UNIQUEMENT si le champ demande explicitement le CV et qu'il n'a pas encore été envoyé
         if any(w in combined for w in ["cv", "lebenslauf", "resume", "curriculum", "werdegang", "profil", "bewerbungsunterlagen"]):
             if "cv" not in self.uploaded_categories:
                 if self.cv_path and os.path.exists(self.cv_path):

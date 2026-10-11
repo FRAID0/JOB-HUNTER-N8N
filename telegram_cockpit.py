@@ -264,23 +264,49 @@ def analyze_job_with_gemini(text_content=None, image_path=None, profile=None):
     addr = p_info.get("address", {})
     c_addr_str = f"{addr.get('street', '')}, {addr.get('postal_code', '')} {addr.get('city', '')}".strip(", ")
 
-    prompt = f"""Du bist ein professioneller deutscher Karriereberater und Senior IT-Recruiter.
-Analysiere folgende Stellenausschreibung für {c_name}:
+    prompt = f"""Du bist ein erstklassiger deutscher Karriereberater und Senior IT-Headhunter.
+Analysiere folgende Stellenausschreibung für {c_name} und erstelle ein überzeugendes deutsches Anschreiben (DIN 5008 Standard):
 
-PROFIL DES BEWERBERS:
+MASTER-PROFIL DES BEWERBERS (REALE PROJEKTE & KOMPETENZEN):
 - Name: {c_name}
 - Kontakt: {c_phone} | {c_email} | {c_addr_str}
 - Online-Portfolio: https://portfolio-pro-fraid.vercel.app/de | GitHub: https://github.com/FRAID0
-- Studium: Angewandte Informatik (B.Sc.) an der Hochschule Worms (abschlussnah).
-- Praxiserfahrung PWO AG: Prozessautomatisierung, SQL-Datenstrukturen, SCADA-Integration, CI/CD-Pipelines (Azure DevOps, Python, Docker).
-- Industrieprojekt mit Bosch: RESTful-API mit FastAPI, Apache Kafka und QuestDB (Fahrzeug-Echtzeitdaten).
-- Tech-Stack: Python, SQL (PostgreSQL), Docker, CI/CD, FastAPI, Kafka, Linux, Node.js, Automatisierung.
-- Sprachen: Deutsch (fließend / verhandlungssicher - TestDaF 4), Französisch (Muttersprache), Englisch (technische Grundkenntnisse B1).
+- Studium: B.Sc. Angewandte Informatik an der Hochschule Worms (abschlussnah).
+- Sprachen: Deutsch (verhandlungssicher / C1, TestDaF 4), Französisch (Muttersprache), Englisch (fließend im technischen Umfeld).
+
+TECH-STACK & PROJEKT-NACHWEISE:
+1. Backend & Web-APIs:
+   - TypeScript / JavaScript: Modulare APIs und Web-Plattformen mit NestJS, Node.js, Express und PostgreSQL.
+   - Python: RESTful APIs mit FastAPI, Flask, Daten-Pipelines.
+2. Frontend: React, Angular, Tailwind CSS, reaktive Benutzeroberflächen.
+3. Data & Streaming: Apache Kafka, QuestDB, PostgreSQL, SQLite, MQTT (Industrieprojekt in Kooperation mit Bosch für Telemetrie-Echtzeitdaten).
+4. DevOps & Cloud:
+   - CI/CD & Automatisierung bei der PWO AG: Azure DevOps, Python, SCADA, relationale SQL-Datenstrukturen.
+   - Containerisierung mit Docker & Docker Compose: In universitären IIoT-Projekten (z. B. TOP-Projekt, Telemetrie-Architektur) sowie Web-Plattform-Deployments.
+5. Arbeitsweise: Agile Methoden, Clean Code, Type Safety, moderne KI-gestützte Entwicklungs-Workflows als Produktivitäts- und Qualitätshebel.
+
+STRIKTE REGELN FÜR DAS ANSCHREIBEN:
+1. KEINE DEFENSIVE SPRACHE ODER ENTSCHULDIGUNGEN:
+   - Verwende NIEMALS Phrasen wie "Obwohl mein bisheriger Schwerpunkt...", "Auch wenn ich noch lernen muss...", "Trotz fehlender Erfahrung...".
+   - Präsentiere TypeScript/NestJS, Python, Fullstack-Architekturen und DevOps als bereits erprobte, fundierte Kernkompetenzen! Der Ton muss selbstbewusst, lösungsorientiert und professionell sein.
+2. ECHTE FULLSTACK-EXPERTISE VERKNÜPFEN (Match & Anchor):
+   - Verbinde Backend- und Datenkompetenzen (FastAPI/Python, Kafka, PostgreSQL) logisch mit modernen TypeScript/NestJS-Architekturen und Frontend (React/Tailwind).
+   - Verankere jede Kernanforderung der Stellenanzeige in einem realen Projekt (PWO AG, Bosch-Projekt, Portfolio-Webplattformen).
+3. PFLICHT-REFERENZ AUF DAS PORTFOLIO:
+   - Binde den Link zum Online-Portfolio (https://portfolio-pro-fraid.vercel.app/de) zwingend und natürlich im 2. Absatz ein (z. B.: "Einen detaillierten Einblick in meine bisherigen Architekturen und Projekte finden Sie auf meiner Portfolio-Website unter https://portfolio-pro-fraid.vercel.app/de").
+4. AUFBAU & FORM:
+   - 3 bis 4 prägnante Absätze, Anrede "Sehr geehrte Damen und Herren" (oder Name falls bekannt), klare Betreffzeile ("Bewerbung als [job_title]"), Abschluss mit "Mit freundlichen Grüßen".
+5. STRIKTE TRENNUNG DER PROJEKTE (KEINE FALSCHEN ZUORDNUNGEN):
+   - Bosch-Kooperation: Praxisnahes Hochschulprojekt der Hochschule Worms in Kooperation mit der Bosch-Gruppe (Echtzeit-Telemetriedaten mit FastAPI, Apache Kafka und QuestDB). Betone: Es war ein praxisnahes Studienprojekt in Kooperation mit Bosch, keine direkte Festanstellung!
+   - PWO AG: Praktikum & Bachelorarbeit (Prozessautomatisierung, relationale SQL-Datenstrukturen, SCADA-Systeme und CI/CD-Pipelines mit Azure DevOps, YAML und Python). Erwähne NIEMALS Kafka und NIEMALS Docker bei der PWO AG!
+   - TOP-Projekt (Hochschule Worms): Cloud-Webanwendung zur Workshop-Verwaltung mit Node.js, Express, PostgreSQL, Sequelize und Deployment auf AWS EC2.
+   - Containerisierung mit Docker & Docker Compose: In universitären IIoT-Projekten (z. B. TOP-Projekt), Microservices und Web-Plattform-Deployments.
+   - TypeScript / NestJS / React: Web-Plattformen und modulare APIs im Portfolio (https://portfolio-pro-fraid.vercel.app/de).
 
 AUFGABEN:
 1. Extrahiere den Unternehmensnamen (company_name), die genaue Stellenbezeichnung (job_title) und die Bewerbungs-URL (apply_url) falls sichtbar.
 2. Ermittle einen strategischen Match-Score (score: 1-100) und eine prägnante Begründung (begruendung).
-3. Verfasse ein maßgeschneidertes, hochprofessionelles deutsches Anschreiben (DIN 5008 Standard), das {c_name}s reale Erfahrungen (PWO AG, Bosch-Projekt, Python/DevOps) präzise auf die Anforderungen der Stelle abbildet.
+3. Verfasse das Anschreiben gemäß den oben genannten strikten Regeln.
 
 Antworte STRENG als valides JSON-Objekt in diesem Format:
 {{
