@@ -796,6 +796,30 @@ def start_cockpit():
 
                         if target_url:
                             print(f"🎯 URL identifiée : {target_url}", flush=True)
+
+                            # Mettre à jour immédiatement les boutons sur le message Telegram
+                            try:
+                                status_cache_id = f"done_{int(time.time())}"
+                                URL_CACHE[status_cache_id] = target_url
+                                telegram_api(token, "editMessageReplyMarkup", {
+                                    "chat_id": chat_id,
+                                    "message_id": msg["message_id"],
+                                    "reply_markup": {
+                                        "inline_keyboard": [
+                                            [
+                                                {"text": "✅ MARQUER COMME POSTULÉ", "callback_data": f"done:{status_cache_id}"},
+                                                {"text": "❌ IGNORER", "callback_data": f"ignore:{status_cache_id}"}
+                                            ],
+                                            [
+                                                {"text": "🌐 VOIR L'OFFRE EN LIGNE", "url": target_url},
+                                                {"text": "💻 MON PORTFOLIO", "url": "https://portfolio-pro-fraid.vercel.app/de"}
+                                            ]
+                                        ]
+                                    }
+                                })
+                            except Exception as edit_err:
+                                print(f"[BOUTON UPDATE INFO] {edit_err}", flush=True)
+
                             threading.Thread(
                                 target=execute_playwright_application,
                                 args=(target_url, token, chat_id, job_title, company_name, cover_letter_text),
