@@ -706,32 +706,32 @@ def start_cockpit():
                         # 3. Résoudre l'URL cible
                         target_url = None
                         try:
-                            # Décodage du slug dans callback_data
-                            slug = cq_data
-                            for prefix in ["apply:", "apply_"]:
-                                if slug.startswith(prefix):
-                                    slug = slug[len(prefix):]
-                            slug = slug.strip()
-
-                            if slug in URL_CACHE:
-                                target_url = URL_CACHE[slug]
-                            elif slug.startswith("http"):
-                                target_url = slug
-                            elif slug and "arbeitnow" not in slug and "/" not in slug:
-                                target_url = f"https://www.arbeitnow.com/view/{slug}"
-
-                            # Boutons de message
-                            if not target_url:
-                                rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
-                                for row in rows:
-                                    for btn in row:
-                                        btn_text = btn.get("text", "").upper()
-                                        btn_url = btn.get("url")
-                                        if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text:
-                                            target_url = btn_url
-                                            break
-                                    if target_url:
+                            # Priorité 1 : Extraire l'URL complète directement depuis les boutons du message
+                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
+                            for row in rows:
+                                for btn in row:
+                                    btn_text = btn.get("text", "").upper()
+                                    btn_url = btn.get("url")
+                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text and "GITHUB" not in btn_text:
+                                        target_url = btn_url
                                         break
+                                if target_url:
+                                    break
+
+                            # Priorité 2 : Si non trouvée dans les boutons, utiliser le cache ou le slug
+                            if not target_url:
+                                slug = cq_data
+                                for prefix in ["apply:", "apply_"]:
+                                    if slug.startswith(prefix):
+                                        slug = slug[len(prefix):]
+                                slug = slug.strip()
+
+                                if slug in URL_CACHE:
+                                    target_url = URL_CACHE[slug]
+                                elif slug.startswith("http"):
+                                    target_url = slug
+                                elif slug and "arbeitnow" not in slug and "/" not in slug:
+                                    target_url = f"https://www.arbeitnow.com/view/{slug}"
 
                             # Entités du message
                             if not target_url:
