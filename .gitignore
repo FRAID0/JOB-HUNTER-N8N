@@ -60,3 +60,6 @@ scratch/
 *.tmp
 .DS_Store
 Thumbs.db
+BLOG_POST*.md
+BLOG_POST_DRAFT.md
+

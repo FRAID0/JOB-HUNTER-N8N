@@ -121,6 +121,19 @@ def telegram_api(token, method, data=None):
             req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=35) as res:
             return json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8")
+            err_json = json.loads(err_body)
+            desc = err_json.get("description", err_body)
+            # Les erreurs "query is too old" sur answerCallbackQuery sont inoffensives et fréquentes sur vieux clics
+            if "query is too old" in desc.lower():
+                pass
+            else:
+                print(f"[TELEGRAM API INFO] {method}: {e.code} - {desc}", flush=True)
+        except Exception:
+            print(f"[TELEGRAM API INFO] {method}: {e}", flush=True)
+        return None
     except Exception as e:
         print(f"[TELEGRAM API INFO] {method}: {e}", flush=True)
         return None

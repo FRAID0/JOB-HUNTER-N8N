@@ -121,7 +121,7 @@
             {
               "id": "0f3cce00-dab1-456e-a75f-7543929bf92a",
               "leftValue": "={{ $json.title.toLowerCase() }}",
-              "rightValue": "junior|werkstudent|student|praktik|intern|trainee|entry|absolvent",
+              "rightValue": "junior|werkstudent|praktik|intern|trainee|entry|absolvent|master|studentische",
               "operator": {
                 "type": "string",
                 "operation": "regex"
@@ -139,7 +139,7 @@
             {
               "id": "ea513c02-97ee-4d42-a01e-fa35b31ddf8d",
               "leftValue": "={{ $json.title.toLowerCase() }}",
-              "rightValue": "senior|lead|principal|head|director|marketing|sales|vertrieb|hr|recruiting",
+              "rightValue": "senior|lead|principal|head|director|marketing|sales|vertrieb|hr|recruiting|ausbildung|azubi|lehrling|lehrstelle|dualer student|duales studium bachelor",
               "operator": {
                 "type": "string",
                 "operation": "notRegex"
@@ -238,7 +238,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Du bist ein erfahrener deutscher Karriereberater und Senior IT-Headhunter.\nDeine Aufgabe ist es, eine Stellenausschreibung für Alex Dupont strategisch zu analysieren und nur bei echter Eignung ein erstklassiges Anschreiben zu verfassen.\n\n══════════════════════════════════════════════════\nSTELLENAUSSCHREIBUNG\n══════════════════════════════════════════════════\nUNTERNEHMEN: {{ $json.company_name }}\nTITEL: {{ $json.title }}\nSTANDORT: {{ $json.location || 'Deutschland' }}\nBESCHREIBUNG: {{ $json.description }}\n\n══════════════════════════════════════════════════\nBEWERBERPROFIL (KANDIDAT)\n══════════════════════════════════════════════════\n- Name: Alex Dupont\n- Wohnort: Musterstraße 1, 10115 Berlin (Baden-Württemberg)\n- Kontakt: +49 170 0000000 | candidate@example.com\n- Portfolio: https://example.com/portfolio\n- GitHub: https://github.com/your-username\n- Status: Student der Angewandten Informatik (B.Sc., TU Berlin), abschlussnah.\n- Praxiserfahrung Tech Corp GmbH: Prozessautomatisierung, SQL-Datenstrukturen, SCADA-Integration, CI/CD-Pipelines (Azure DevOps, Python, Docker).\n- Industrieprojekt Tech Giant: RESTful-API mit FastAPI, Apache Kafka und QuestDB (Fahrzeug-Echtzeitdaten).\n- Kern-Stack: Python, SQL (PostgreSQL), Docker, CI/CD, FastAPI, Kafka, Linux, Node.js, Automatisierung (n8n, KI-Workflows).\n- Sprachen: Deutsch (fließend/verhandlungssicher, TestDaF 4), Französisch (Muttersprache), Englisch (technische Grundkenntnisse B1).\n\n══════════════════════════════════════════════════\nDEINE AUFGABEN\n══════════════════════════════════════════════════\n\n1. STRATEGISCHES SCORING (1 bis 100):\nBewerte die Passgenauigkeit anhand folgender Kriterien:\n- TECH-MATCH: Passen die Technologien (Python, DevOps, Docker, SQL, APIs)? \n  (Achtung: Reine SAP-ABAP/ERP-Stellen sind ein Gap; Cloud/DevOps-Stellen im SAP-Umfeld sind bei passenden Tools valide).\n- SENIORITÄTS-LEVEL: Ideal für Werkstudent / Praktikum / Junior / Trainee. \n  (Harter Abzug: Wenn explizit >3 Jahre Berufserfahrung oder Senior/Lead verlangt wird -> Score < 50).\n- STANDORT & MOBILITÄT: \n  (100% Remote = Top; Großraum Karlsruhe/Offenburg/Freiburg/Mannheim/Stuttgart = Sehr gut; Bei Vollzeit-Praktika in Metropolen wie Berlin ist Umzugsbereitschaft vorhanden).\n\n2. STRATEGISCHE BEGRÜNDUNG (Kompakt & präzise):\nFasse die Bewertung in 3 präzisen Punkten zusammen:\n- Tech-Fit: Direkte Übereinstimmungen und eventuelle technische Gaps.\n- Level-Fit: Eignung für Ausbildungsstand.\n- Standort/Modell: Pendelbarkeit bzw. Remote-Möglichkeit.\n\n3. ANSCHREIBEN NACH DIN 5008 (NUR ERSTELLEN WENN SCORE >= 60):\nWenn SCORE < 60: Schreibe KEIN Anschreiben, sondern vermerke: \"KEIN ANSCHREIBEN ERSTELLT (Score unter 60).\"\nWenn SCORE >= 60: Verfasse ein überzeugendes Anschreiben:\n- SPRACHE: Immer Deutsch.\n- BETREFF: Bewerbung als [Exakter Stellentitel]\n- ANREDE: Formell (\"Sehr geehrte Damen und Herren,\" oder konkreter Name).\n- EINLEITUNG: Direkter Einstieg ohne Standardfloskeln.\n- 2-3 KONKRETE BULLET POINTS (•): Verknüpfe Anforderungen der Stelle mit Alexs Projekten (Tech Corp GmbH, IoT Real-Time Project, TU Berlin).\n- PORTFOLIO: Verweis auf https://example.com/portfolio\n- SCHLUSS: Aktive Einladung zum Gespräch (\"Ich freue mich auf...\", keine Konjunktive), Grußformel und Name.\n\n══════════════════════════════════════════════════\nAUSGABEFORMAT (STRIKT EINHALTEN)\n══════════════════════════════════════════════════\nSCORE: [Zahl 1-100]\nBEGRÜNDUNG:\n• Tech-Fit: [1 prägnanter Satz zu Matches & Gaps]\n• Level-Fit: [1 Satz zur Eignung Werkstudent/Junior]\n• Standort: [1 Satz zu Remote / Anfahrt ab Berlin]\n---\n[Hier das Anschreiben ab 'Sehr geehrte...' - oder Vermerk wenn Score < 60]\n",
+        "text": "=Du bist ein erfahrener deutscher Karriereberater und Senior IT-Headhunter.\nDeine Aufgabe ist es, eine Stellenausschreibung für Alex Dupont strategisch zu analysieren und nur bei echter Eignung ein erstklassiges Anschreiben zu verfassen.\n\n══════════════════════════════════════════════════\nSTELLENAUSSCHREIBUNG\n══════════════════════════════════════════════════\nUNTERNEHMEN: {{ $json.company_name }}\nTITEL: {{ $json.title }}\nSTANDORT: {{ $json.location || 'Deutschland' }}\nBESCHREIBUNG: {{ $json.description }}\n\n══════════════════════════════════════════════════\nBEWERBERPROFIL (KANDIDAT)\n══════════════════════════════════════════════════\n- Name: Alex Dupont\n- Wohnort: Musterstraße 1, 10115 Berlin (Baden-Württemberg)\n- Kontakt: +49 170 0000000 | candidate@example.com\n- Portfolio: https://example.com/portfolio\n- GitHub: https://github.com/your-username\n- Status: Student der Angewandten Informatik (B.Sc., TU Berlin), abschlussnah.\n- Praxiserfahrung Tech Corp GmbH: Prozessautomatisierung, SQL-Datenstrukturen, SCADA-Integration, CI/CD-Pipelines (Azure DevOps, Python, Docker).\n- Industrieprojekt Tech Giant: RESTful-API mit FastAPI, Apache Kafka und QuestDB (Fahrzeug-Echtzeitdaten).\n- Kern-Stack: Python, SQL (PostgreSQL), Docker, CI/CD, FastAPI, Kafka, Linux, Node.js, Automatisierung (n8n, KI-Workflows).\n- Sprachen: Deutsch (fließend/verhandlungssicher, TestDaF 4), Französisch (Muttersprache), Englisch (technische Grundkenntnisse B1).\n\n══════════════════════════════════════════════════\nDEINE AUFGABEN\n══════════════════════════════════════════════════\n\n1. STRATEGISCHES SCORING (1 bis 100):\nBewerte die Passgenauigkeit anhand folgender Kriterien:\n- TECH-MATCH: Passen die Technologien (Python, DevOps, Docker, SQL, APIs)? \n  (Achtung: Reine SAP-ABAP/ERP-Stellen sind ein Gap; Cloud/DevOps-Stellen im SAP-Umfeld sind bei passenden Tools valide).\n- SENIORITÄTS-LEVEL: Ideal für Werkstudent / Praktikum / Junior / Trainee / Absolvent.\n  (Harter Abzug: Wenn explizit >3 Jahre Berufserfahrung oder Senior/Lead verlangt wird -> Score < 50).\n- STUDIEN- & AUSBILDUNGSLEVEL:\n  Der Kandidat schließt seinen Bachelor of Science (B.Sc.) ab. Reine Ausbildungen (Azubi, Fachinformatiker) oder Duale Studiengänge auf Bachelor-Niveau sind STRIKT UNGEEIGNET (Score < 30).\n  Duale Studiengänge sind NUR dann relevant, wenn sie sich explizit an Master-Studierende (Master of Science dual) richten.\n- STANDORT & MOBILITÄT: \n  (100% Remote = Top; Großraum Karlsruhe/Offenburg/Freiburg/Mannheim/Stuttgart = Sehr gut; Bei Vollzeit-Praktika in Metropolen wie Berlin ist Umzugsbereitschaft vorhanden).\n\n2. STRATEGISCHE BEGRÜNDUNG (Kompakt & präzise):\nFasse die Bewertung in 3 präzisen Punkten zusammen:\n- Tech-Fit: Direkte Übereinstimmungen und eventuelle technische Gaps.\n- Level-Fit: Eignung für Ausbildungsstand.\n- Standort/Modell: Pendelbarkeit bzw. Remote-Möglichkeit.\n\n3. ANSCHREIBEN NACH DIN 5008 (NUR ERSTELLEN WENN SCORE >= 60):\nWenn SCORE < 60: Schreibe KEIN Anschreiben, sondern vermerke: \"KEIN ANSCHREIBEN ERSTELLT (Score unter 60).\"\nWenn SCORE >= 60: Verfasse ein überzeugendes Anschreiben:\n- SPRACHE: Immer Deutsch.\n- BETREFF: Bewerbung als [Exakter Stellentitel]\n- ANREDE: Formell (\"Sehr geehrte Damen und Herren,\" oder konkreter Name).\n- EINLEITUNG: Direkter Einstieg ohne Standardfloskeln.\n- 2-3 KONKRETE BULLET POINTS (•): Verknüpfe Anforderungen der Stelle mit Alexs Projekten (Tech Corp GmbH, IoT Real-Time Project, TU Berlin).\n- PORTFOLIO: Verweis auf https://example.com/portfolio\n- SCHLUSS: Aktive Einladung zum Gespräch (\"Ich freue mich auf...\", keine Konjunktive), Grußformel und Name.\n\n══════════════════════════════════════════════════\nAUSGABEFORMAT (STRIKT EINHALTEN)\n══════════════════════════════════════════════════\nSCORE: [Zahl 1-100]\nBEGRÜNDUNG:\n• Tech-Fit: [1 prägnanter Satz zu Matches & Gaps]\n• Level-Fit: [1 Satz zur Eignung Werkstudent/Junior]\n• Standort: [1 Satz zu Remote / Anfahrt ab Berlin]\n---\n[Hier das Anschreiben ab 'Sehr geehrte...' - oder Vermerk wenn Score < 60]\n",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
@@ -585,6 +585,88 @@
           "name": "Google Sheets account"
         }
       }
+    },
+    {
+      "parameters": {
+        "url": "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "was",
+              "value": "Informatik"
+            },
+            {
+              "name": "size",
+              "value": "50"
+            },
+            {
+              "name": "veroeffentlichtseit",
+              "value": "3"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "jobboerse-jobsuche"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -512,
+        -400
+      ],
+      "id": "ba-http-request-jobsuche",
+      "name": "JOB Bundesagentur für Arbeit"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "ergebnisliste",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -400
+      ],
+      "id": "ba-split-out-jobs",
+      "name": "Split BA Jobs"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(entry => {\n  const item = entry.json;\n  const locations = item.stellenlokationen || [];\n  const locStr = locations.map(l => l?.adresse?.ort).filter(Boolean).join(', ') || 'Deutschland';\n  const url = item.externeURL || `https://www.arbeitsagentur.de/jobsuche/jobdetail/${item.referenznummer}`;\n  const refB64 = Buffer.from(item.referenznummer || '').toString('base64');\n\n  return {\n    json: {\n      title: item.stellenangebotsTitel || item.hauptberuf || 'Softwareentwickler',\n      company_name: item.firma || 'Nicht angegeben',\n      location: locStr,\n      url: url,\n      description: `Stellenangebot via Bundesagentur für Arbeit (Ref: ${item.referenznummer}). Berufsfeld: ${item.hauptberuf || 'Informatik'}.`,\n      referenznummer: item.referenznummer,\n      ref_b64: refB64,\n      source: 'Bundesagentur für Arbeit',\n      published_at: item.datumErsteVeroeffentlichung\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -400
+      ],
+      "id": "ba-format-code",
+      "name": "Format BA Jobs"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "merge-all-sources-id",
+      "name": "Merge All Sources"
     }
   ],
   "connections": {
@@ -598,6 +680,11 @@
           },
           {
             "node": "Jobs Suisse (SwissDev)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "JOB Bundesagentur für Arbeit",
             "type": "main",
             "index": 0
           }
@@ -652,7 +739,7 @@
       "main": [
         [
           {
-            "node": "Filter",
+            "node": "Merge All Sources",
             "type": "main",
             "index": 0
           }
@@ -797,6 +884,50 @@
         [
           {
             "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JOB Bundesagentur für Arbeit": {
+      "main": [
+        [
+          {
+            "node": "Split BA Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split BA Jobs": {
+      "main": [
+        [
+          {
+            "node": "Format BA Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format BA Jobs": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Sources": {
+      "main": [
+        [
+          {
+            "node": "Filter",
             "type": "main",
             "index": 0
           }

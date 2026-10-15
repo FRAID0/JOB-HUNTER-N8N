@@ -8,5 +8,9 @@ services:
     restart: always
     ports:
       - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Europe/Paris
+      - TZ=Europe/Paris
     volumes:
       - n8n_data:/home/node/.n8n
+
