@@ -39,43 +39,43 @@ The system operates across three decoupled layers: **Orchestration**, **Mobile D
 
 ```mermaid
 flowchart TD
-    subgraph Layer 1: Multi-Source Ingestion & AI Scoring (n8n & Docker)
-        ST[⏰ Schedule Trigger\nEvery Morning @ 08:00 / 09:00] --> BA[🇩🇪 Bundesagentur für Arbeit API\nOfficial REST Jobsuche Service]
-        ST --> ARB[🌐 Arbeitnow API\nEuropean Tech Ecosystem]
-        ST --> SWISS[🇨🇭 SwissDevJobs API\nSwiss Market]
+    subgraph L1["Layer 1: Multi-Source Ingestion & AI Scoring (n8n & Docker)"]
+        st["⏰ Schedule Trigger<br>Every Morning @ 08:00 / 09:00"] --> ba["🇩🇪 Bundesagentur für Arbeit API<br>Official REST Jobsuche Service"]
+        st --> arb["🌐 Arbeitnow API<br>European Tech Ecosystem"]
+        st --> swiss["🇨🇭 SwissDevJobs API<br>Swiss Market"]
 
-        BA --> SPLIT_BA[Split BA Postings\nField: ergebnisliste]
-        SPLIT_BA --> NORM_BA[Format & Normalize\nTitle, Company, City, URL]
+        ba --> splitba["Split BA Postings<br>Field: ergebnisliste"]
+        splitba --> normba["Format & Normalize<br>Title, Company, City, URL"]
 
-        ARB --> MERGE_EXT[Merge External Sources]
-        SWISS --> MERGE_EXT
+        arb --> mergeext["Merge External Sources"]
+        swiss --> mergeext
 
-        MERGE_EXT --> MERGE_ALL[🔀 Merge All Sources]
-        NORM_BA --> MERGE_ALL
+        mergeext --> mergeall["🔀 Merge All Sources"]
+        normba --> mergeall
 
-        MERGE_ALL --> FILTER[🔍 Intelligent Regex Filter\nDomain Tech & Seniority Level]
-        FILTER --> DEDUP{Google Sheets DB\nAlready Evaluated?}
-        DEDUP -- Yes (Duplicate) --> SKIP[Discard silently]
-        DEDUP -- No (Fresh Job) --> LLM[🧠 Multi-LLM Chain: Groq / Gemini\nFit Score 0-100 + DIN 5008 Anschreiben]
-        LLM --> GSS[Save Row in Google Sheets]
-        GSS --> TG_ALERT[📱 Telegram Alert\nWith Interactive Action Buttons]
+        mergeall --> filter["🔍 Intelligent Regex Filter<br>Domain Tech & Seniority Level"]
+        filter --> dedup{"Google Sheets DB<br>Already Evaluated?"}
+        dedup -- "Yes (Duplicate)" --> skip["Discard silently"]
+        dedup -- "No (Fresh Job)" --> llm["🧠 Multi-LLM Chain: Groq / Gemini<br>Fit Score 0-100 + DIN 5008 Anschreiben"]
+        llm --> gss["Save Row in Google Sheets"]
+        gss --> tgalert["📱 Telegram Alert<br>With Interactive Action Buttons"]
     end
 
-    subgraph Layer 2: Mobile Decision Cockpit (Telegram)
-        TG_ALERT --> TG_USER[User Smartphone]
-        TG_USER -- Tap 'Apply' --> TG_CB[Telegram Callback Query]
-        TG_USER -- Send URL / Screenshot --> TG_MM[Multimodal Vision Input]
+    subgraph L2["Layer 2: Mobile Decision Cockpit (Telegram)"]
+        tgalert --> tguser["User Smartphone"]
+        tguser -- "Tap 'Apply'" --> tgcb["Telegram Callback Query"]
+        tguser -- "Send URL / Screenshot" --> tgmm["Multimodal Vision Input"]
     end
 
-    subgraph Layer 3: Local Agent Engine (FastAPI & Playwright)
-        TG_CB --> WRK[Local Desktop Execution Engine]
-        TG_MM --> WRK
-        WRK --> PDF[📄 DIN 5008 PDF Generator\nTailored German Letter]
-        WRK --> PLY[🎭 Playwright Browser Engine\nChromium Desktop Window]
-        PLY --> DOM[DOM Indexer & ATS Fast-Path\nPersonio / Greenhouse / Workday]
-        DOM --> HUB[Document Hub\nUpload CV, Grades, Certificate]
-        HUB --> GUARD{🛡️ TerminalGuard\nSafety Boundary}
-        GUARD -->|Pre-fill Form + Proof Screenshot| HITL[👤 Human Verification & Final Click]
+    subgraph L3["Layer 3: Local Agent Engine (FastAPI & Playwright)"]
+        tgcb --> wrk["Local Desktop Execution Engine"]
+        tgmm --> wrk
+        wrk --> pdf["📄 DIN 5008 PDF Generator<br>Tailored German Letter"]
+        wrk --> ply["🎭 Playwright Browser Engine<br>Chromium Desktop Window"]
+        ply --> dom["DOM Indexer & ATS Fast-Path<br>Personio / Greenhouse / Workday"]
+        dom --> hub["Document Hub<br>Upload CV, Grades, Certificate"]
+        hub --> guard{"🛡️ TerminalGuard<br>Safety Boundary"}
+        guard -->|Pre-fill Form + Proof Screenshot| hitl["👤 Human Verification & Final Click"]
     end
 ```
 
