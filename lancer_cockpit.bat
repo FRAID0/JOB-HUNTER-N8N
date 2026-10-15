@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 > nul
-title Cockpit Telegram Playwright - Wilfried Manfouo Fomekong
+title Cockpit Telegram Playwright - Job Hunter Autonomous
 echo =================================================================
 echo    COCKPIT TELEGRAM PLAYWRIGHT (100% AUTOMATIQUE)
 echo =================================================================

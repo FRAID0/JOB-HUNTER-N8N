@@ -1,7 +1,7 @@
 # 🗺️ Roadmap : Application Operating System (Job Hunter Bot)
 
 > **Projet :** Système d'automatisation des candidatures tech (DACH : Allemagne 🇩🇪, Suisse 🇨🇭, Luxembourg 🇱🇺)  
-> **Candidat :** Wilfried Manfouo Fomekong (B.Sc. Angewandte Informatik, Hochschule Worms)  
+> **Candidat :** Profil Développeur Full-Stack / DevOps / Cloud (B.Sc. Angewandte Informatik)  
 > **Architecture :** n8n (Orchestrateur) + Telegram (Cockpit Décision) + FastAPI/Playwright (Bras Exécuteur) + Google Sheets (Source de Vérité)
 
 ---

@@ -19,9 +19,12 @@ class HumanApprovalRequired(Exception):
 TERMINAL_PATTERNS: Set[str] = {
     # German - Final Application & Legal Actions
     r"jetzt\s+bewerben",
+    r"bewerbung\s+senden",
     r"bewerbung\s+absenden",
     r"bewerbung\s+abschicken",
     r"bewerbung\s+einreichen",
+    r"unterlagen\s+senden",
+    r"unterlagen\s+einreichen",
     r"kostenpflichtig\s+bestellen",
     r"kostenpflichtig\s+anmelden",
     r"zahlungspflichtig\s+bestellen",
@@ -35,6 +38,7 @@ TERMINAL_PATTERNS: Set[str] = {
     r"absenden\s*$",
     r"^absenden",
     r"^bewerben\s*$",
+    r"^senden\s*$",
 
     # English - Final Application & Submission
     r"submit\s+application",

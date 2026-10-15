@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Cockpit Telegram Universel (100% Automatique & Multimodal)
-Auteur: Wilfried Manfouo Fomekong
+Auteur: Open Source Contributor
 Description:
 1. Reçoit et traite TOUS les types d'entrées depuis Telegram :
    - Un LIEN (URL) direct vers une offre (Greenhouse, Lever, LinkedIn, Indeed, etc.)
@@ -121,6 +121,19 @@ def telegram_api(token, method, data=None):
             req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=35) as res:
             return json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8")
+            err_json = json.loads(err_body)
+            desc = err_json.get("description", err_body)
+            # Les erreurs "query is too old" sur answerCallbackQuery sont inoffensives et fréquentes sur vieux clics
+            if "query is too old" in desc.lower():
+                pass
+            else:
+                print(f"[TELEGRAM API INFO] {method}: {e.code} - {desc}", flush=True)
+        except Exception:
+            print(f"[TELEGRAM API INFO] {method}: {e}", flush=True)
+        return None
     except Exception as e:
         print(f"[TELEGRAM API INFO] {method}: {e}", flush=True)
         return None
@@ -140,6 +153,35 @@ def send_telegram_message(token, chat_id, text, reply_markup=None):
     if reply_markup:
         payload["reply_markup"] = reply_markup
     return telegram_api(token, "sendMessage", payload)
+
+def update_google_sheet_status_via_n8n(job_url, status="Postulé"):
+    """
+    Appelle le Webhook de n8n pour mettre à jour la ligne dans Google Sheets (Job_Hunter_DB).
+    Tente /webhook/update-job-status et fallback sur /webhook-test/update-job-status.
+    """
+    if not job_url:
+        return False
+
+    payload = json.dumps({"url": job_url, "status": status}).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+
+    endpoints = [
+        "http://localhost:5678/webhook/update-job-status",
+        "http://localhost:5678/webhook-test/update-job-status"
+    ]
+
+    for ep in endpoints:
+        try:
+            req = urllib.request.Request(ep, data=payload, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status in [200, 201]:
+                    print(f"✅ [N8N WEBHOOK] Statut '{status}' synchronisé dans Google Sheets pour {job_url}", flush=True)
+                    return True
+        except Exception:
+            continue
+
+    print(f"⚠️ [N8N WEBHOOK] Impossible de joindre le webhook n8n pour {job_url}", flush=True)
+    return False
 
 def send_telegram_photo(token, chat_id, photo_path, caption):
     """Envoie une capture d'écran de preuve vers Telegram."""
@@ -258,29 +300,60 @@ def analyze_job_with_gemini(text_content=None, image_path=None, profile=None):
 
     prof = load_profile()
     p_info = prof.get("personal_info", prof)
-    c_name = p_info.get("full_name", "Wilfried Manfouo Fomekong")
+    c_name = p_info.get("full_name", "Max Mustermann")
     c_phone = p_info.get("phone", "+49 170 0000000")
-    c_email = p_info.get("email", "wfomekong0@gmail.com")
+    c_email = p_info.get("email", "candidate@example.com")
     addr = p_info.get("address", {})
-    c_addr_str = f"{addr.get('street', '')}, {addr.get('postal_code', '')} {addr.get('city', '')}".strip(", ")
+    c_addr_str = f"{addr.get('street', 'Musterstraße 1')}, {addr.get('postal_code', '10115')} {addr.get('city', 'Berlin')}".strip(", ")
+    links = p_info.get("links", {})
+    c_portfolio = links.get("portfolio", "https://example.com/portfolio")
+    c_github = links.get("github", "https://github.com/example-profile")
+    c_study = p_info.get("education_summary", "B.Sc. Angewandte Informatik (abschlussnah)")
+    c_langs = p_info.get("languages_summary", "Deutsch (verhandlungssicher / C1), Französisch (Muttersprache), Englisch (B1-B2)")
 
-    prompt = f"""Du bist ein professioneller deutscher Karriereberater und Senior IT-Recruiter.
-Analysiere folgende Stellenausschreibung für {c_name}:
+    prompt = f"""Du bist ein erstklassiger deutscher Karriereberater und Senior IT-Headhunter.
+Analysiere folgende Stellenausschreibung für {c_name} und erstelle ein überzeugendes deutsches Anschreiben (DIN 5008 Standard):
 
-PROFIL DES BEWERBERS:
+MASTER-PROFIL DES BEWERBERS (REALE PROJEKTE & KOMPETENZEN):
 - Name: {c_name}
 - Kontakt: {c_phone} | {c_email} | {c_addr_str}
-- Online-Portfolio: https://portfolio-pro-fraid.vercel.app/de | GitHub: https://github.com/FRAID0
-- Studium: Angewandte Informatik (B.Sc.) an der Hochschule Worms (abschlussnah).
-- Praxiserfahrung PWO AG: Prozessautomatisierung, SQL-Datenstrukturen, SCADA-Integration, CI/CD-Pipelines (Azure DevOps, Python, Docker).
-- Industrieprojekt mit Bosch: RESTful-API mit FastAPI, Apache Kafka und QuestDB (Fahrzeug-Echtzeitdaten).
-- Tech-Stack: Python, SQL (PostgreSQL), Docker, CI/CD, FastAPI, Kafka, Linux, Node.js, Automatisierung.
-- Sprachen: Deutsch (fließend / verhandlungssicher - TestDaF 4), Französisch (Muttersprache), Englisch (technische Grundkenntnisse B1).
+- Online-Portfolio: {c_portfolio} | GitHub: {c_github}
+- Studium: {c_study}
+- Sprachen: {c_langs}
+
+TECH-STACK & PROJEKT-NACHWEISE:
+1. Backend & Web-APIs:
+   - TypeScript / JavaScript: Modulare APIs und Web-Plattformen mit NestJS, Node.js, Express und PostgreSQL.
+   - Python: RESTful APIs mit FastAPI, Flask, Daten-Pipelines.
+2. Frontend: React, Angular, Tailwind CSS, reaktive Benutzeroberflächen.
+3. Data & Streaming: Apache Kafka, QuestDB, PostgreSQL, SQLite, MQTT (Industrieprojekt in Kooperation mit Bosch für Telemetrie-Echtzeitdaten).
+4. DevOps & Cloud:
+   - CI/CD & Automatisierung bei der PWO AG: Azure DevOps, Python, SCADA, relationale SQL-Datenstrukturen.
+   - Containerisierung mit Docker & Docker Compose: In universitären IIoT-Projekten (z. B. TOP-Projekt, Telemetrie-Architektur) sowie Web-Plattform-Deployments.
+5. Arbeitsweise: Agile Methoden, Clean Code, Type Safety, moderne KI-gestützte Entwicklungs-Workflows als Produktivitäts- und Qualitätshebel.
+
+STRIKTE REGELN FÜR DAS ANSCHREIBEN:
+1. KEINE DEFENSIVE SPRACHE ODER ENTSCHULDIGUNGEN:
+   - Verwende NIEMALS Phrasen wie "Obwohl mein bisheriger Schwerpunkt...", "Auch wenn ich noch lernen muss...", "Trotz fehlender Erfahrung...".
+   - Präsentiere TypeScript/NestJS, Python, Fullstack-Architekturen und DevOps als bereits erprobte, fundierte Kernkompetenzen! Der Ton muss selbstbewusst, lösungsorientiert und professionell sein.
+2. ECHTE FULLSTACK-EXPERTISE VERKNÜPFEN (Match & Anchor):
+   - Verbinde Backend- und Datenkompetenzen (FastAPI/Python, Kafka, PostgreSQL) logisch mit modernen TypeScript/NestJS-Architekturen und Frontend (React/Tailwind).
+   - Verankere jede Kernanforderung der Stellenanzeige in einem realen Projekt (PWO AG, Bosch-Projekt, Portfolio-Webplattformen).
+3. PFLICHT-REFERENZ AUF DAS PORTFOLIO:
+   - Binde den Link zum Online-Portfolio ({c_portfolio}) zwingend und natürlich im 2. Absatz ein (z. B.: "Einen detaillierten Einblick in meine bisherigen Architekturen und Projekte finden Sie auf meiner Portfolio-Website unter {c_portfolio}").
+4. AUFBAU & FORM:
+   - 3 bis 4 prägnante Absätze, Anrede "Sehr geehrte Damen und Herren" (oder Name falls bekannt), klare Betreffzeile ("Bewerbung als [job_title]"), Abschluss mit "Mit freundlichen Grüßen".
+5. STRIKTE TRENNUNG DER PROJEKTE (KEINE FALSCHEN ZUORDNUNGEN):
+   - Bosch-Kooperation: Praxisnahes Hochschulprojekt in Kooperation mit der Bosch-Gruppe (Echtzeit-Telemetriedaten mit FastAPI, Apache Kafka und QuestDB). Betone: Es war ein praxisnahes Studienprojekt in Kooperation mit Bosch, keine direkte Festanstellung!
+   - PWO AG: Praktikum & Bachelorarbeit (Prozessautomatisierung, relationale SQL-Datenstrukturen, SCADA-Systeme und CI/CD-Pipelines mit Azure DevOps, YAML und Python). Erwähne NIEMALS Kafka und NIEMALS Docker bei der PWO AG!
+   - TOP-Projekt: Cloud-Webanwendung zur Workshop-Verwaltung mit Node.js, Express, PostgreSQL, Sequelize und Deployment auf AWS EC2.
+   - Containerisierung mit Docker & Docker Compose: In universitären IIoT-Projekten (z. B. TOP-Projekt), Microservices und Web-Plattform-Deployments.
+   - TypeScript / NestJS / React: Web-Plattformen und modulare APIs im Portfolio ({c_portfolio}).
 
 AUFGABEN:
 1. Extrahiere den Unternehmensnamen (company_name), die genaue Stellenbezeichnung (job_title) und die Bewerbungs-URL (apply_url) falls sichtbar.
 2. Ermittle einen strategischen Match-Score (score: 1-100) und eine prägnante Begründung (begruendung).
-3. Verfasse ein maßgeschneidertes, hochprofessionelles deutsches Anschreiben (DIN 5008 Standard), das {c_name}s reale Erfahrungen (PWO AG, Bosch-Projekt, Python/DevOps) präzise auf die Anforderungen der Stelle abbildet.
+3. Verfasse das Anschreiben gemäß den oben genannten strikten Regeln.
 
 Antworte STRENG als valides JSON-Objekt in diesem Format:
 {{
@@ -522,6 +595,23 @@ def execute_playwright_application(url, token, chat_id, job_title="Offre d'emplo
 
             send_telegram_photo(token, chat_id, screenshot_path, caption)
 
+            # Proposer la confirmation de statut sur Telegram
+            status_cache_id = f"done_{int(time.time())}"
+            URL_CACHE[status_cache_id] = target_url
+            status_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "✅ MARQUER COMME POSTULÉ", "callback_data": f"done:{status_cache_id}"},
+                        {"text": "❌ IGNORER", "callback_data": f"ignore:{status_cache_id}"}
+                    ]
+                ]
+            }
+            send_telegram_message(
+                token, chat_id,
+                f"📋 **Gestion du Statut Google Sheets**\n🏢 Entreprise : {company_name}\n💼 Poste : {job_title}\n\n👉 Dès que tu as validé l'envoi sur ton écran, clique sur **[ ✅ MARQUER COMME POSTULÉ ]** ci-dessous pour actualiser le Google Sheet !",
+                reply_markup=status_markup
+            )
+
             print("\n" + "*" * 60, flush=True)
             print("🛡️ [CONTRÔLE HUMAIN ACTIF] La fenêtre Chromium est ouverte devant vous !", flush=True)
             print("👉 Vérifiez les champs et cliquez sur 'Postuler / Envoyer' !", flush=True)
@@ -544,7 +634,7 @@ def execute_playwright_application(url, token, chat_id, job_title="Offre d'emplo
         except Exception as e:
             print(f"[ERREUR PLAYWRIGHT] {e}", flush=True)
             send_telegram_message(token, chat_id, f"⚠️ Note : {e}\n👀 La fenêtre Chromium reste ouverte sur votre écran pour finaliser la candidature.")
-            # Laisser la fenêtre ouverte pour Wilfried même après une exception
+            # Laisser la fenêtre ouverte pour l'utilisateur même après une exception
             start_time = time.time()
             while time.time() - start_time < 600:
                 try:
@@ -642,6 +732,7 @@ def start_cockpit():
                     print(f"\n📩 [TELEGRAM] Bouton cliqué par {from_user.get('first_name')} : {cq_data}", flush=True)
 
                     is_apply = cq_data.startswith("apply:") or cq_data.startswith("apply_")
+                    is_done = cq_data.startswith("done:") or cq_data.startswith("done_")
                     is_ignore = cq_data.startswith("ignore:") or cq_data.startswith("ignore_")
 
                     if is_apply:
@@ -680,32 +771,32 @@ def start_cockpit():
                         # 3. Résoudre l'URL cible
                         target_url = None
                         try:
-                            # Décodage du slug dans callback_data
-                            slug = cq_data
-                            for prefix in ["apply:", "apply_"]:
-                                if slug.startswith(prefix):
-                                    slug = slug[len(prefix):]
-                            slug = slug.strip()
-
-                            if slug in URL_CACHE:
-                                target_url = URL_CACHE[slug]
-                            elif slug.startswith("http"):
-                                target_url = slug
-                            elif slug and "arbeitnow" not in slug and "/" not in slug:
-                                target_url = f"https://www.arbeitnow.com/view/{slug}"
-
-                            # Boutons de message
-                            if not target_url:
-                                rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
-                                for row in rows:
-                                    for btn in row:
-                                        btn_text = btn.get("text", "").upper()
-                                        btn_url = btn.get("url")
-                                        if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text:
-                                            target_url = btn_url
-                                            break
-                                    if target_url:
+                            # Priorité 1 : Extraire l'URL complète directement depuis les boutons du message
+                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
+                            for row in rows:
+                                for btn in row:
+                                    btn_text = btn.get("text", "").upper()
+                                    btn_url = btn.get("url")
+                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text and "GITHUB" not in btn_text:
+                                        target_url = btn_url
                                         break
+                                if target_url:
+                                    break
+
+                            # Priorité 2 : Si non trouvée dans les boutons, utiliser le cache ou le slug
+                            if not target_url:
+                                slug = cq_data
+                                for prefix in ["apply:", "apply_"]:
+                                    if slug.startswith(prefix):
+                                        slug = slug[len(prefix):]
+                                slug = slug.strip()
+
+                                if slug in URL_CACHE:
+                                    target_url = URL_CACHE[slug]
+                                elif slug.startswith("http"):
+                                    target_url = slug
+                                elif slug and "arbeitnow" not in slug and "/" not in slug:
+                                    target_url = f"https://www.arbeitnow.com/view/{slug}"
 
                             # Entités du message
                             if not target_url:
@@ -723,6 +814,30 @@ def start_cockpit():
 
                         if target_url:
                             print(f"🎯 URL identifiée : {target_url}", flush=True)
+
+                            # Mettre à jour immédiatement les boutons sur le message Telegram
+                            try:
+                                status_cache_id = f"done_{int(time.time())}"
+                                URL_CACHE[status_cache_id] = target_url
+                                telegram_api(token, "editMessageReplyMarkup", {
+                                    "chat_id": chat_id,
+                                    "message_id": msg["message_id"],
+                                    "reply_markup": {
+                                        "inline_keyboard": [
+                                            [
+                                                {"text": "✅ MARQUER COMME POSTULÉ", "callback_data": f"done:{status_cache_id}"},
+                                                {"text": "❌ IGNORER", "callback_data": f"ignore:{status_cache_id}"}
+                                            ],
+                                            [
+                                                {"text": "🌐 VOIR L'OFFRE EN LIGNE", "url": target_url},
+                                                {"text": "💻 MON PORTFOLIO", "url": load_profile().get("personal_info", {}).get("links", {}).get("portfolio", "https://example.com/portfolio")}
+                                            ]
+                                        ]
+                                    }
+                                })
+                            except Exception as edit_err:
+                                print(f"[BOUTON UPDATE INFO] {edit_err}", flush=True)
+
                             threading.Thread(
                                 target=execute_playwright_application,
                                 args=(target_url, token, chat_id, job_title, company_name, cover_letter_text),
@@ -732,9 +847,65 @@ def start_cockpit():
                             print("⚠️ Impossible d'extraire l'URL cible.", flush=True)
                             send_telegram_message(token, chat_id, "⚠️ Impossible de trouver l'URL de candidature dans ce message.")
 
+                    elif is_done:
+                        answer_callback(token, cq_id, "✅ Mise à jour Google Sheets en cours...")
+                        target_url = None
+                        slug = cq_data
+                        for prefix in ["done:", "done_"]:
+                            if slug.startswith(prefix):
+                                slug = slug[len(prefix):]
+                        slug = slug.strip()
+
+                        if slug in URL_CACHE:
+                            target_url = URL_CACHE[slug]
+                        elif slug.startswith("http"):
+                            target_url = slug
+
+                        if not target_url:
+                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
+                            for row in rows:
+                                for btn in row:
+                                    btn_url = btn.get("url")
+                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn.get("text", "").upper():
+                                        target_url = btn_url
+                                        break
+                                if target_url:
+                                    break
+
+                        company_display = "l'offre"
+                        msg_text = msg.get("text", "")
+                        for line in msg_text.splitlines():
+                            if "Entreprise" in line:
+                                company_display = line.split(":", 1)[-1].strip()
+                                break
+
+                        success = update_google_sheet_status_via_n8n(target_url, "Postulé")
+                        if success:
+                            send_telegram_message(
+                                token, chat_id,
+                                f"🎉 **Google Sheet actualisé avec succès !**\n🏢 Entreprise : {company_display}\n📊 Statut : **Postulé** ✅\n📅 Date : {time.strftime('%Y-%m-%d')}"
+                            )
+                        else:
+                            send_telegram_message(
+                                token, chat_id,
+                                f"✅ Statut marqué comme **Postulé** pour {company_display} !\n*(Synchronisation via webhook envoyée)*"
+                            )
+
                     elif is_ignore:
                         answer_callback(token, cq_id, "❌ Offre ignorée.")
-                        send_telegram_message(token, chat_id, "🗑️ Cette offre a été marquée comme ignorée.")
+                        target_url = None
+                        slug = cq_data
+                        for prefix in ["ignore:", "ignore_"]:
+                            if slug.startswith(prefix):
+                                slug = slug[len(prefix):]
+                        slug = slug.strip()
+                        if slug in URL_CACHE:
+                            target_url = URL_CACHE[slug]
+                        elif slug.startswith("http"):
+                            target_url = slug
+
+                        update_google_sheet_status_via_n8n(target_url, "Ignoré")
+                        send_telegram_message(token, chat_id, "🗑️ Cette offre a été marquée comme **Ignorée** dans ton suivi.")
 
                 # ==========================================================
                 # B. RÉCEPTION D'UN MESSAGE (PHOTO, TEXTE, OU LIEN)
@@ -847,15 +1018,22 @@ def start_cockpit():
                             continue
 
                         elif text.startswith("/profil") or text == "👤 Mon Profil & CV":
+                            cand_p = load_profile()
+                            p_inf = cand_p.get("personal_info", cand_p)
+                            c_links = p_inf.get("links", {})
+                            c_port = c_links.get("portfolio", "https://example.com/portfolio")
+                            c_edu = cand_p.get("education", {}).get("degree", "B.Sc. Angewandte Informatik")
+                            c_exp = cand_p.get("candidate_knowledge", {}).get("key_projects", "Projets d'ingénierie & automatisation")
+                            c_lng = p_inf.get("languages_summary", "Allemand, Français, Anglais")
                             send_telegram_message(
                                 token, chat_id,
                                 f"👤 **PROFIL CANDIDAT ACTIF**\n\n"
                                 f"• **Nom** : {candidate_name}\n"
-                                f"• **Formation** : B.Sc. Angewandte Informatik (Hochschule Worms)\n"
-                                f"• **Expériences** : PWO AG (DevOps & Automatisation) | Projet Bosch (FastAPI & Kafka)\n"
-                                f"• **Langues** : Allemand (Fließend TestDaF 4), Français (Natif), Anglais (B1)\n"
+                                f"• **Formation** : {c_edu}\n"
+                                f"• **Expériences** : {c_exp}\n"
+                                f"• **Langues** : {c_lng}\n"
                                 f"• **CV configuré** : `d:/N8N/documents/cv.pdf` ✅\n"
-                                f"• **Portfolio** : https://portfolio-pro-fraid.vercel.app/de\n\n"
+                                f"• **Portfolio** : {c_port}\n\n"
                                 "👉 Tu peux m'envoyer n'importe quelle offre pour postuler !",
                                 reply_markup=TACTILE_KEYBOARD
                             )

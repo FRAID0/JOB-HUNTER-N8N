@@ -1,0 +1,943 @@
+{
+  "name": "Job Hunter Autonomous - Template",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -672,
+        -64
+      ],
+      "id": "b3295b1a-7538-4bec-9c06-de18b270cc6c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.arbeitnow.com/api/job-board-api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -512,
+        -224
+      ],
+      "id": "5fbac9df-d12a-428a-a52a-418a567ccd09",
+      "name": "JOB Deutschland"
+    },
+    {
+      "parameters": {
+        "url": "https://swissdevjobs.ch/api/jobsLight",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -512,
+        144
+      ],
+      "id": "cf5ed2bd-574f-4957-b670-4b69b933f70f",
+      "name": "Jobs Suisse (SwissDev)"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -112
+      ],
+      "id": "74ba40a9-217a-4373-8171-753d8198ed4e",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1db94532-4d3f-42af-b431-7de315637018",
+              "name": "title",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "6d7e2aef-d1c3-4935-9434-48f8d5e53561",
+              "name": "=company_name",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "8d4615af-9a05-457f-a92b-96f325de09d7",
+              "name": "=url",
+              "value": "=https://swissdevjobs.ch/jobs/{{ $json.jobUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -400,
+        32
+      ],
+      "id": "a25cc616-a33f-4704-a6a6-0f29906abae8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -176,
+        -80
+      ],
+      "id": "0375ffbb-f68c-4bdc-b999-e228fb699c3d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0f3cce00-dab1-456e-a75f-7543929bf92a",
+              "leftValue": "={{ $json.title.toLowerCase() }}",
+              "rightValue": "junior|werkstudent|praktik|intern|trainee|entry|absolvent|master|studentische",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "2f4d0b19-ecf3-4c81-9d1f-56f08331c795",
+              "leftValue": "={{ $json.title.toLowerCase() }}",
+              "rightValue": "developer|entwickler|software|fullstack|backend|frontend|devops|python|typescript|web|informatik|cloud|data",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "ea513c02-97ee-4d42-a01e-fa35b31ddf8d",
+              "leftValue": "={{ $json.title.toLowerCase() }}",
+              "rightValue": "senior|lead|principal|head|director|marketing|sales|vertrieb|hr|recruiting|ausbildung|azubi|lehrling|lehrstelle|dualer student|duales studium bachelor",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -112,
+        128
+      ],
+      "id": "f8d8813e-22e9-48cc-bff1-76bf358efffa",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        32,
+        -32
+      ],
+      "id": "defa7d5b-db62-4542-8bec-412f6389d9ce",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Job_Hunter_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        -280
+      ],
+      "id": "b5d6c780-0838-4055-9d67-f4709d7face4",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "r2fQb28FKdWol96U",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(item => item.json);\n\nconst normalizeUrl = (value) =>\n  typeof value === 'string'\n    ? value.trim().replace(/\\/+$/, '').toLowerCase()\n    : '';\n\nconst savedUrls = new Set(\n  rows\n    .map(row => normalizeUrl(row.ID_Lien))\n    .filter(Boolean)\n);\n\nconst jobs = $('Limit').all().map(item => item.json);\n\nconst newJobs = jobs.filter(job => {\n  const url = normalizeUrl(job.url);\n  return url && !savedUrls.has(url);\n});\n\nreturn newJobs.map(job => ({ json: job }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "51f4a719-11a5-4528-b170-fd6c231ff4ab",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        440,
+        -48
+      ],
+      "id": "1582718a-4b26-42f7-b1da-67878182b985",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Du bist ein erfahrener deutscher Karriereberater und Senior IT-Headhunter.\nDeine Aufgabe ist es, eine Stellenausschreibung für Alex Dupont strategisch zu analysieren und nur bei echter Eignung ein erstklassiges Anschreiben zu verfassen.\n\n══════════════════════════════════════════════════\nSTELLENAUSSCHREIBUNG\n══════════════════════════════════════════════════\nUNTERNEHMEN: {{ $json.company_name }}\nTITEL: {{ $json.title }}\nSTANDORT: {{ $json.location || 'Deutschland' }}\nBESCHREIBUNG: {{ $json.description }}\n\n══════════════════════════════════════════════════\nBEWERBERPROFIL (KANDIDAT)\n══════════════════════════════════════════════════\n- Name: Alex Dupont\n- Wohnort: Musterstraße 1, 10115 Berlin (Baden-Württemberg)\n- Kontakt: +49 170 0000000 | candidate@example.com\n- Portfolio: https://example.com/portfolio\n- GitHub: https://github.com/your-username\n- Status: Student der Angewandten Informatik (B.Sc., TU Berlin), abschlussnah.\n- Praxiserfahrung Tech Corp GmbH: Prozessautomatisierung, SQL-Datenstrukturen, SCADA-Integration, CI/CD-Pipelines (Azure DevOps, Python, Docker).\n- Industrieprojekt Tech Giant: RESTful-API mit FastAPI, Apache Kafka und QuestDB (Fahrzeug-Echtzeitdaten).\n- Kern-Stack: Python, SQL (PostgreSQL), Docker, CI/CD, FastAPI, Kafka, Linux, Node.js, Automatisierung (n8n, KI-Workflows).\n- Sprachen: Deutsch (fließend/verhandlungssicher, TestDaF 4), Französisch (Muttersprache), Englisch (technische Grundkenntnisse B1).\n\n══════════════════════════════════════════════════\nDEINE AUFGABEN\n══════════════════════════════════════════════════\n\n1. STRATEGISCHES SCORING (1 bis 100):\nBewerte die Passgenauigkeit anhand folgender Kriterien:\n- TECH-MATCH: Passen die Technologien (Python, DevOps, Docker, SQL, APIs)? \n  (Achtung: Reine SAP-ABAP/ERP-Stellen sind ein Gap; Cloud/DevOps-Stellen im SAP-Umfeld sind bei passenden Tools valide).\n- SENIORITÄTS-LEVEL: Ideal für Werkstudent / Praktikum / Junior / Trainee / Absolvent.\n  (Harter Abzug: Wenn explizit >3 Jahre Berufserfahrung oder Senior/Lead verlangt wird -> Score < 50).\n- STUDIEN- & AUSBILDUNGSLEVEL:\n  Der Kandidat schließt seinen Bachelor of Science (B.Sc.) ab. Reine Ausbildungen (Azubi, Fachinformatiker) oder Duale Studiengänge auf Bachelor-Niveau sind STRIKT UNGEEIGNET (Score < 30).\n  Duale Studiengänge sind NUR dann relevant, wenn sie sich explizit an Master-Studierende (Master of Science dual) richten.\n- STANDORT & MOBILITÄT: \n  (100% Remote = Top; Großraum Karlsruhe/Offenburg/Freiburg/Mannheim/Stuttgart = Sehr gut; Bei Vollzeit-Praktika in Metropolen wie Berlin ist Umzugsbereitschaft vorhanden).\n\n2. STRATEGISCHE BEGRÜNDUNG (Kompakt & präzise):\nFasse die Bewertung in 3 präzisen Punkten zusammen:\n- Tech-Fit: Direkte Übereinstimmungen und eventuelle technische Gaps.\n- Level-Fit: Eignung für Ausbildungsstand.\n- Standort/Modell: Pendelbarkeit bzw. Remote-Möglichkeit.\n\n3. ANSCHREIBEN NACH DIN 5008 (NUR ERSTELLEN WENN SCORE >= 60):\nWenn SCORE < 60: Schreibe KEIN Anschreiben, sondern vermerke: \"KEIN ANSCHREIBEN ERSTELLT (Score unter 60).\"\nWenn SCORE >= 60: Verfasse ein überzeugendes Anschreiben:\n- SPRACHE: Immer Deutsch.\n- BETREFF: Bewerbung als [Exakter Stellentitel]\n- ANREDE: Formell (\"Sehr geehrte Damen und Herren,\" oder konkreter Name).\n- EINLEITUNG: Direkter Einstieg ohne Standardfloskeln.\n- 2-3 KONKRETE BULLET POINTS (•): Verknüpfe Anforderungen der Stelle mit Alexs Projekten (Tech Corp GmbH, IoT Real-Time Project, TU Berlin).\n- PORTFOLIO: Verweis auf https://example.com/portfolio\n- SCHLUSS: Aktive Einladung zum Gespräch (\"Ich freue mich auf...\", keine Konjunktive), Grußformel und Name.\n\n══════════════════════════════════════════════════\nAUSGABEFORMAT (STRIKT EINHALTEN)\n══════════════════════════════════════════════════\nSCORE: [Zahl 1-100]\nBEGRÜNDUNG:\n• Tech-Fit: [1 prägnanter Satz zu Matches & Gaps]\n• Level-Fit: [1 Satz zur Eignung Werkstudent/Junior]\n• Standort: [1 Satz zu Remote / Anfahrt ab Berlin]\n---\n[Hier das Anschreiben ab 'Sehr geehrte...' - oder Vermerk wenn Score < 60]\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        660,
+        48
+      ],
+      "id": "01ab1009-2c32-4a5d-86d4-6af5a2a50fff",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        640,
+        240
+      ],
+      "id": "6385e078-4ec3-46f2-adfa-4f6b12b571c7",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "LfvbEw3Yq0SKvk9A",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        240
+      ],
+      "id": "f73f39af-7834-4e01-80b0-6a915b4eda3f",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ZEDwJqzQWgdGiUex",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Job_Hunter_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Lien": "={{ $('Loop Over Items').item.json.url }}",
+            "Date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Entreprise": "={{ $('Loop Over Items').item.json.company_name }}",
+            "Poste": "={{ $('Loop Over Items').item.json.title }}",
+            "Statut": "Nouveau",
+            "Score_IA": "={{ $('Basic LLM Chain').item.json.text.match(/SCORE:\\s*(\\d+)/)?.[1] || '70' }}",
+            "Lettre_Motivation": "={{ $('Basic LLM Chain').item.json.text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID_Lien",
+              "displayName": "ID_Lien",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Entreprise",
+              "displayName": "Entreprise",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Poste",
+              "displayName": "Poste",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Statut",
+              "displayName": "Statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score_IA",
+              "displayName": "Score_IA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lettre_Motivation",
+              "displayName": "Lettre_Motivation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        48
+      ],
+      "id": "490723cc-3205-4661-be53-7f1f20eef8b9",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "r2fQb28FKdWol96U",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@example.com",
+        "toEmail": "notifications@example.com",
+        "subject": "=NEW JOB : [Match IA] {{ $('Loop Over Items').item.json.company_name }} - {{ $('Loop Over Items').item.json.title }}",
+        "html": "=<div style=\"font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px;\">\n  <!-- BANDEAU RECAPITULATIF DU BOT -->\n  <div style=\"max-width: 700px; margin: 0 auto 20px auto; background-color: #ffffff; border-left: 5px solid #2563eb; padding: 15px 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">\n    <h3 style=\"margin: 0 0 10px 0; color: #1e3a8a;\">🎯 Nouvelle Opportunité Détectée</h3>\n    <p style=\"margin: 4px 0; color: #374151;\"><strong>Entreprise :</strong> {{ $('Loop Over Items').item.json.company_name }}</p>\n    <p style=\"margin: 4px 0; color: #374151;\"><strong>Poste :</strong> {{ $('Loop Over Items').item.json.title }}</p>\n    <p style=\"margin: 10px 0 0 0;\">\n      <a href=\"{{ $('Loop Over Items').item.json.url }}\" target=\"_blank\" style=\"display: inline-block; background-color: #2563eb; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;\">\n        👉 Ouvrir l'offre d'emploi originale\n      </a>\n    </p>\n  </div>\n\n  <!-- LA FEUILLE OFFICIELLE (ANSCHREIBEN DIN 5008) -->\n  <div style=\"max-width: 700px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); line-height: 1.6; color: #111827;\">\n    \n    <!-- EN-TETE DE KANDIDAT (ALIGNÉ À DROITE COMME SUR TON PDF) -->\n    <div style=\"text-align: right; margin-bottom: 30px; font-size: 14px; color: #374151;\">\n      <strong style=\"font-size: 16px; color: #111827;\">Alex DUPONT</strong><br>\n      +49 170 0000000 | <a href=\"mailto:candidate@example.com\" style=\"color: #2563eb;\">candidate@example.com</a><br>\n      Musterstraße 1, 10115 Berlin<br>\n      <a href=\"https://example.com/portfolio\" target=\"_blank\" style=\"color: #2563eb; font-weight: bold;\">Online-Portfolio ansehen</a>\n    </div>\n\n    <!-- CONTENU DU COURRIER (AVEC LES RETOURS À LA LIGNE PROPRES) -->\n    <div style=\"white-space: pre-wrap; font-size: 15px; font-family: 'Segoe UI', Arial, sans-serif;\">\n{{ $json.text }}\n    </div>\n\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1080,
+        48
+      ],
+      "id": "4839aa08-3b49-48ea-af0c-f154e1aaff0e",
+      "name": "Send an Email",
+      "webhookId": "3c5586c0-3be0-4f21-8875-c418743504a0",
+      "credentials": {
+        "smtp": {
+          "id": "FW0BgPlf4hLuEIW8",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  JSON.stringify({\n    chat_id: YOUR_TELEGRAM_CHAT_ID,\n    text: \"╔══════════════════════════════════════╗\\n  🚀 NOUVELLE OPPORTUNITÉ QUALIFIÉE\\n╠══════════════════════════════════════╣\\n🏢 Entreprise : \" + $('Loop Over Items').item.json.company_name + \"\\n💼 Poste      : \" + $('Loop Over Items').item.json.title + \"\\n📍 Lieu       : \" + ($('Loop Over Items').item.json.location || 'Deutschland') + \"\\n🎯 Score IA   : \" + ($('Basic LLM Chain').item.json.text.match(/SCORE:\\s*(\\d+)/)?.[1] || '70') + \"/100\\n📄 Statut     : Enregistré dans Google Sheet ✅\\n\\n--- EXTRAIT DE L'ANSCHREIBEN ---\\n\" + $('Basic LLM Chain').item.json.text.slice(0, 300) + \"...\\n\\n👉 Souhaites-tu postuler automatiquement à cette offre ?\",\n    reply_markup: {\n      inline_keyboard: [\n        [\n          { text: \"🚀 POSTULER SUR MON ÉCRAN\", callback_data: \"apply_\" + ($('Loop Over Items').item.json.slug || 'job1').slice(0, 50) },\n          { text: \"❌ IGNORER\", callback_data: \"ignore_\" + ($('Loop Over Items').item.json.slug || 'job1').slice(0, 50) }\n        ],\n        [\n          { text: \"🌐 VOIR L'OFFRE EN LIGNE\", url: $('Loop Over Items').item.json.url },\n          { text: \"💻 MON PORTFOLIO\", url: \"https://example.com/portfolio\" }\n        ]\n      ]\n    }\n  })\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1280,
+        48
+      ],
+      "id": "3834cb65-ad56-4dec-a5a1-89ca7650c061",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "amount": 65
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        48
+      ],
+      "id": "5c3f90d9-b759-4796-ab0b-f38c8d4d55f5",
+      "name": "Wait (65s)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update-job-status",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        336
+      ],
+      "id": "c162e99e-39a6-49cb-a8f6-dd6253e3ce26",
+      "name": "Webhook",
+      "webhookId": "4acb4d58-7651-4d94-8a6d-d4caa00bdb32"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Job_Hunter_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Job_Hunter_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_Lien": "={{ $json.body.url }}",
+            "Statut": "={{ $json.body.status || 'Postulé' }}",
+            "Date": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "ID_Lien"
+          ],
+          "schema": [
+            {
+              "id": "ID_Lien",
+              "displayName": "ID_Lien",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Entreprise",
+              "displayName": "Entreprise",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Poste",
+              "displayName": "Poste",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Statut",
+              "displayName": "Statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score_IA",
+              "displayName": "Score_IA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lettre_Motivation",
+              "displayName": "Lettre_Motivation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -272,
+        336
+      ],
+      "id": "85d792ac-0cac-48ae-88ff-a21308f2b6f4",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "r2fQb28FKdWol96U",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "was",
+              "value": "Informatik"
+            },
+            {
+              "name": "size",
+              "value": "50"
+            },
+            {
+              "name": "veroeffentlichtseit",
+              "value": "3"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "jobboerse-jobsuche"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -512,
+        -400
+      ],
+      "id": "ba-http-request-jobsuche",
+      "name": "JOB Bundesagentur für Arbeit"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "ergebnisliste",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -400
+      ],
+      "id": "ba-split-out-jobs",
+      "name": "Split BA Jobs"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(entry => {\n  const item = entry.json;\n  const locations = item.stellenlokationen || [];\n  const locStr = locations.map(l => l?.adresse?.ort).filter(Boolean).join(', ') || 'Deutschland';\n  const url = item.externeURL || `https://www.arbeitsagentur.de/jobsuche/jobdetail/${item.referenznummer}`;\n  const refB64 = Buffer.from(item.referenznummer || '').toString('base64');\n\n  return {\n    json: {\n      title: item.stellenangebotsTitel || item.hauptberuf || 'Softwareentwickler',\n      company_name: item.firma || 'Nicht angegeben',\n      location: locStr,\n      url: url,\n      description: `Stellenangebot via Bundesagentur für Arbeit (Ref: ${item.referenznummer}). Berufsfeld: ${item.hauptberuf || 'Informatik'}.`,\n      referenznummer: item.referenznummer,\n      ref_b64: refB64,\n      source: 'Bundesagentur für Arbeit',\n      published_at: item.datumErsteVeroeffentlichung\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -400
+      ],
+      "id": "ba-format-code",
+      "name": "Format BA Jobs"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "merge-all-sources-id",
+      "name": "Merge All Sources"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "JOB Deutschland",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Jobs Suisse (SwissDev)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "JOB Bundesagentur für Arbeit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JOB Deutschland": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jobs Suisse (SwissDev)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an Email": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Wait (65s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (65s)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JOB Bundesagentur für Arbeit": {
+      "main": [
+        [
+          {
+            "node": "Split BA Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split BA Jobs": {
+      "main": [
+        [
+          {
+            "node": "Format BA Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format BA Jobs": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Sources": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a524057aca1ba28b8b5bfae7f41c1b453f81859f7b6362160e31af5828bf6f07"
+  }
+}

@@ -113,7 +113,10 @@ class AutonomousAgentLoop:
             # 1. Check if we already reached a state where only terminal buttons remain
             empty_inputs = [
                 el for el in obs.elements
-                if el.tag in ("input", "textarea") and (not el.value or el.value.strip() == "") and not el.is_terminal
+                if el.tag in ("input", "textarea")
+                and (el.element_type or "").lower() not in ("file", "hidden", "submit", "button", "checkbox", "radio")
+                and (not el.value or el.value.strip() == "")
+                and not el.is_terminal
             ]
             
             if obs.has_terminal_button and len(empty_inputs) == 0 and not obs.has_validation_errors and step > 1:
@@ -145,6 +148,9 @@ class AutonomousAgentLoop:
                                 val_lower = str(action.value or "").lower()
                                 if "cv" in val_lower or "lebenslauf" in val_lower:
                                     self.fast_path.uploaded_categories.add("cv")
+                                if "anschreiben" in val_lower or "cover" in val_lower:
+                                    self.fast_path.uploaded_categories.add("anschreiben")
+                                self.fast_path.uploaded_categories.add(os.path.basename(val_lower))
                         except HumanApprovalRequired:
                             raise
                         except Exception as ex:

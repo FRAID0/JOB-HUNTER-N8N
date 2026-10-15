@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 API Worker Playwright pour n8n
-Auteur: Wilfried Manfouo Fomekong
+Auteur: Open Source Contributor
 Description: Reçoit l'ordre de candidature depuis n8n (clic Telegram),
 ouvre Chromium, pré-remplit les champs et le CV, et renvoie le statut.
 """
@@ -79,7 +79,7 @@ def run_playwright_job(req: ApplicationRequest):
 
             # En mode PC (non-headless), on laisse 60 secondes pour vérifier et cliquer
             if not req.headless:
-                print("[WORKER] Navigateur ouvert. Wilfried peut vérifier et cliquer sur le bouton final...")
+                print("[WORKER] Navigateur ouvert. L'utilisateur peut vérifier et cliquer sur le bouton final...")
                 time.sleep(60)
 
         except Exception as e:
@@ -93,7 +93,7 @@ def health():
     return {
         "status": "healthy",
         "service": "Playwright Application Copilot",
-        "candidate": "Wilfried Manfouo Fomekong"
+        "candidate": "Candidate"
     }
 
 @app.post("/apply")
