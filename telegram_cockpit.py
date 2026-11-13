@@ -112,6 +112,28 @@ def get_telegram_token():
     print("[ERREUR CRITIQUE] Aucun token Telegram trouvé dans profil.json ou .env.", flush=True)
     sys.exit(1)
 
+def get_allowed_telegram_chat_ids(profile=None):
+    """Retourne les chats autorisés; aucun chat n'est autorisé par défaut."""
+    configured_ids = set()
+    raw_ids = os.environ.get("TELEGRAM_ALLOWED_CHAT_IDS", os.environ.get("TELEGRAM_CHAT_ID", ""))
+    configured_ids.update(value.strip() for value in raw_ids.split(",") if value.strip())
+
+    profile = profile or {}
+    profile_chat_id = profile.get("telegram", {}).get("chat_id")
+    if profile_chat_id:
+        configured_ids.add(str(profile_chat_id).strip())
+
+    return configured_ids
+
+def is_authorized_telegram_update(update, allowed_chat_ids):
+    """Vérifie le chat Telegram avant tout traitement ou accès aux données."""
+    if "callback_query" in update:
+        message = update["callback_query"].get("message", {})
+    else:
+        message = update.get("message", {})
+    chat_id = str(message.get("chat", {}).get("id", ""))
+    return bool(chat_id and chat_id in allowed_chat_ids)
+
 def telegram_api(token, method, data=None):
     """Appel direct à l'API Telegram en HTTPS sortant."""
     url = f"https://api.telegram.org/bot{token}/{method}"
@@ -161,15 +183,29 @@ def update_google_sheet_status_via_n8n(job_url, status="Postulé"):
     Appelle le Webhook de n8n pour mettre à jour la ligne dans Google Sheets (Job_Hunter_DB).
     Tente /webhook/update-job-status et fallback sur /webhook-test/update-job-status.
     """
-    if not job_url:
+    if not job_url or status not in {"Postulé", "Ignoré"}:
+        return False
+
+    parsed_url = urllib.parse.urlparse(job_url)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        return False
+
+    webhook_token = os.environ.get("N8N_WEBHOOK_TOKEN", "").strip()
+    if not webhook_token:
+        print("⚠️ [N8N WEBHOOK] N8N_WEBHOOK_TOKEN non configuré; appel refusé.", flush=True)
         return False
 
     payload = json.dumps({"url": job_url, "status": status}).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Token": webhook_token,
+    }
 
     endpoints = [
-        "http://localhost:5678/webhook/update-job-status",
-        "http://localhost:5678/webhook-test/update-job-status"
+        os.environ.get(
+            "N8N_WEBHOOK_URL",
+            "http://127.0.0.1:5678/webhook/update-job-status",
+        )
     ]
 
     for ep in endpoints:
@@ -907,6 +943,10 @@ def start_cockpit():
     global LAST_PENDING_JOB
     token = get_telegram_token()
     profile = load_profile()
+    allowed_chat_ids = get_allowed_telegram_chat_ids(profile)
+    if not allowed_chat_ids:
+        print("[ERREUR CRITIQUE] Aucun chat Telegram autorisé. Configurez TELEGRAM_CHAT_ID.", flush=True)
+        sys.exit(1)
     candidate_name = profile["personal_info"]["full_name"]
 
     # Nettoyer d'éventuels webhooks résiduels
@@ -958,6 +998,10 @@ def start_cockpit():
 
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
+
+                if not is_authorized_telegram_update(update, allowed_chat_ids):
+                    print("⚠️ [TELEGRAM] Mise à jour ignorée: chat non autorisé.", flush=True)
+                    continue
 
                 # ==========================================================
                 # A. CLIC SUR UN BOUTON TELEGRAM (CALLBACK QUERY)

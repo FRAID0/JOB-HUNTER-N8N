@@ -461,6 +461,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "update-job-status",
+        "authentication": "headerAuth",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",

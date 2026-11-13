@@ -18,6 +18,7 @@ profil.json
 !profil.example.json
 JOB Auto.json
 JOB_Auto_with_Loop.json
+n8n_workflow_job_hunter.json
 !workflow_job_hunter.example.json
 documents/*.pdf
 documents/*.PDF

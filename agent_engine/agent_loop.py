@@ -127,7 +127,7 @@ class AutonomousAgentLoop:
                 )
 
             # 2. Level 0 & Level 1: Fast-Path Deterministic / Heuristic Fill
-            fast_actions = self.fast_path.plan_fast_actions(obs.elements)
+            fast_actions = self.fast_path.plan_fast_actions(obs.elements, current_url=obs.url)
             executed_any_fast = False
 
             if fast_actions:

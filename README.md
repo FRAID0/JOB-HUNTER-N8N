@@ -172,7 +172,7 @@ Open `.env` in any text editor (Notepad, VS Code) and fill in your values:
 ```ini
 # 1. Telegram Bot Token:
 # Open Telegram, search for @BotFather, type /newbot, follow the prompts, and copy the token.
-TELEGRAM_BOT_TOKEN=1234567890:ABCdefGhIJKlmNoPQRstuVWXyz
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 
 # 2. Your Telegram Chat ID:
 # Search for @userinfobot on Telegram, click Start, and copy your ID number.

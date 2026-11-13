@@ -5,7 +5,7 @@
     "full_name": "Max Mustermann",
     "gender": "Männlich",
     "salutation": "Herr",
-    "default_password": "Candidate@Karriere2026!",
+    "password_domains": [],
     "email": "candidate@example.com",
     "phone": "+49 170 0000000",
     "expected_salary": "52.000 €",

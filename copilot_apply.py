@@ -23,6 +23,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from agent_engine import AutonomousAgentLoop, ApplicationState
+from agent_engine.password_policy import get_site_password
 
 if sys.stdout:
     sys.stdout.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
@@ -926,7 +927,6 @@ def smart_fill(page, profile, cover_letter_text=None, job_title="Offre d'emploi"
     MAX_STEPS = 3
     total_filled = 0
     preferred_subjects = p_info.get("preferred_subjects", ["Informatik", "Mathematik", "Französisch", "Deutsch", "Python"])
-    default_pwd = p_info.get("default_password", "Candidate@Karriere2026!")
 
     already_uploaded_sections = set()
     for step_num in range(1, MAX_STEPS + 1):
@@ -954,17 +954,15 @@ def smart_fill(page, profile, cover_letter_text=None, job_title="Offre d'emploi"
         except Exception:
             pass
 
-        # B. Mot de passe (Portails d'inscription et comptes candidats SEULEMENT - JAMAIS les authwalls de plateforme)
-        current_url = page.url.lower()
-        is_platform_login = any(p in current_url for p in ["linkedin.com", "accounts.google.com", "github.com", "facebook.com", "apple.com"])
-        if not is_platform_login:
+        # B. Mot de passe uniquement pour un domaine explicitement autorisé dans le profil local
+        site_password = get_site_password(profile, page.url)
+        if site_password:
             try:
-                for pwd_inp in page.locator("input[type='password']").all():
-                    if pwd_inp.is_visible(timeout=200):
-                        if not pwd_inp.input_value():
-                            pwd_inp.fill(default_pwd)
-                            print(f"  ✓ Mot de passe sécurisé pré-rempli (compte candidat)", flush=True)
-                            total_filled += 1
+                for password_input in page.locator("input[type='password']").all():
+                    if password_input.is_visible(timeout=200) and not password_input.input_value():
+                        password_input.fill(site_password)
+                        print("  ✓ Mot de passe renseigné pour un domaine autorisé", flush=True)
+                        total_filled += 1
             except Exception:
                 pass
 

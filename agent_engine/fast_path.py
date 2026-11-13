@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from .action_schema import Action, ActionType, IndexedElement
 from .document_hub import DocumentHub
+from .password_policy import get_site_password
 
 
 # Level 0 Deterministic Field Matchers
@@ -66,7 +67,7 @@ class FastPathEngine:
                     return field_key
         return None
 
-    def plan_fast_actions(self, elements: List[IndexedElement]) -> List[Action]:
+    def plan_fast_actions(self, elements: List[IndexedElement], current_url: str = "") -> List[Action]:
         """
         Analyzes interactive elements and produces a list of deterministic (L0)
         and heuristic (L1) actions for matching empty fields.
@@ -101,6 +102,18 @@ class FastPathEngine:
 
             tag = el.tag.lower()
             el_type = (el.element_type or "").lower()
+
+            if tag == "input" and el_type == "password":
+                password = get_site_password(self.profile, current_url)
+                if password:
+                    actions.append(Action(
+                        action_type=ActionType.TYPE,
+                        element_id=el.id,
+                        value=password,
+                        reasoning=f"Opt-in password fill for explicitly trusted host [{current_url}]",
+                    ))
+                    already_handled_elements.add(el.id)
+                continue
 
             # --- LEVEL 0: File Uploads (Lebenslauf, Zeugnisse, Anschreiben) ---
             if tag == "input" and el_type == "file":
@@ -148,20 +161,6 @@ class FastPathEngine:
                         element_id=el.id,
                         value=bio,
                         reasoning=f"Level 0 Deterministic: Pre-filled short bio/motivation into [{el.id}]",
-                    ))
-                    already_handled_elements.add(el.id)
-                    continue
-
-            # --- LEVEL 0: Password fields (Candidate account portals only, never platform logins) ---
-            if tag == "input" and el_type == "password":
-                el_ctx = f"{el.name} {el.placeholder} {el.aria_label}".lower()
-                if not any(ign in el_ctx for ign in ["current-password", "session_password", "login-password", "login_password"]):
-                    pwd = self.profile.get("default_password", "Candidate@Secure2026!")
-                    actions.append(Action(
-                        action_type=ActionType.TYPE,
-                        element_id=el.id,
-                        value=pwd,
-                        reasoning=f"Level 0 Deterministic: Pre-filled default password into element [{el.id}]",
                     ))
                     already_handled_elements.add(el.id)
                     continue
