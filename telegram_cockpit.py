@@ -30,8 +30,10 @@ def acquire_single_instance_lock():
     global _LOCK_SOCKET
     _LOCK_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        _LOCK_SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if sys.platform != "win32":
+            _LOCK_SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _LOCK_SOCKET.bind(("127.0.0.1", 58941))
+        _LOCK_SOCKET.listen(1)
     except OSError:
         print("⚠️ [AVERTISSEMENT] Une instance du Cockpit Telegram est déjà active sur cette machine.", flush=True)
         print("💡 Pour éviter les conflits (erreur 409 Conflict), cette nouvelle tentative s'arrête proprement.", flush=True)
@@ -183,6 +185,158 @@ def update_google_sheet_status_via_n8n(job_url, status="Postulé"):
     print(f"⚠️ [N8N WEBHOOK] Impossible de joindre le webhook n8n pour {job_url}", flush=True)
     return False
 
+def extract_target_url_from_callback(cq_data, msg):
+    """
+    Extrait l'URL cible de manière robuste à partir de la callback_data,
+    du cache mémoire, des boutons inline du message (ex: n8n), ou des entités Telegram.
+    """
+    slug = cq_data or ""
+    for prefix in ["apply:", "apply_", "done:", "done_", "ignore:", "ignore_"]:
+        if slug.startswith(prefix):
+            slug = slug[len(prefix):]
+            break
+    slug = slug.strip()
+
+    # 1. Le slug est directement une URL complète
+    if slug.startswith("http://") or slug.startswith("https://"):
+        return slug
+
+    # 2. Le slug est dans le cache mémoire de la session en cours
+    if slug in URL_CACHE:
+        return URL_CACHE[slug]
+
+    # 3. Extraction depuis les boutons inline du message (très fiable pour les messages envoyés par n8n)
+    rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
+    for row in rows:
+        for btn in row:
+            btn_text = btn.get("text", "").upper()
+            btn_url = btn.get("url")
+            if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text and "GITHUB" not in btn_text:
+                return btn_url
+
+    # 4. Extraction depuis les entités Telegram (liens dans le texte ou la légende)
+    msg_text = msg.get("text", "") or msg.get("caption", "")
+    entities = msg.get("entities", []) or msg.get("caption_entities", [])
+    for entity in entities:
+        if entity.get("type") == "text_link":
+            return entity.get("url")
+        elif entity.get("type") == "url":
+            o = entity.get("offset", 0)
+            l = entity.get("length", 0)
+            candidate = msg_text[o:o+l].strip()
+            if candidate.startswith("http"):
+                return candidate
+
+    # 5. Fallback Arbeitnow si le slug a le bon format
+    if slug and "arbeitnow" not in slug and "/" not in slug and slug not in ["job1", "job", "none"]:
+        return f"https://www.arbeitnow.com/view/{slug}"
+
+    return None
+
+def extract_url_from_message(msg):
+    """
+    Extrait une URL d'un message Telegram de façon universelle :
+    1. Depuis les entités de formatage Telegram (text_link ou url cliquable comme StepStone / LinkedIn).
+    2. Depuis les caption_entities (si document ou aperçu média).
+    3. Par expression régulière dans le texte brut ou la légende.
+    4. Depuis le message cité (reply_to_message).
+    """
+    # 1. Inspection des entités du message (liens intégrés par Telegram lors d'un partage web)
+    entities = msg.get("entities", []) or msg.get("caption_entities", [])
+    text = msg.get("text", "") or msg.get("caption", "")
+
+    for entity in entities:
+        e_type = entity.get("type")
+        if e_type == "text_link" and entity.get("url"):
+            cand = entity.get("url").strip()
+            if cand.startswith("http"):
+                return cand
+        elif e_type == "url":
+            o = entity.get("offset", 0)
+            l = entity.get("length", 0)
+            cand = text[o:o+l].strip()
+            if cand.startswith("http"):
+                return cand
+
+    # 2. Expression régulière sur le texte brut
+    if text:
+        match = re.search(r'(https?://[^\s<>"]+)', text)
+        if match:
+            return match.group(1).strip()
+
+    # 3. Message en réponse (reply_to_message)
+    if "reply_to_message" in msg:
+        reply_url = extract_url_from_message(msg["reply_to_message"])
+        if reply_url:
+            return reply_url
+
+    return None
+
+def update_telegram_message_status(token, chat_id, msg, new_status, action_button_text, target_url=None):
+    """
+    Met à jour visuellement le message Telegram d'origine :
+    1. Remplace la ligne 'Statut : ...' dans le texte par le nouveau statut.
+    2. Remplace les boutons d'action (Postuler/Ignorer) par un bouton fixe (ex: [ ❌ OFFRE IGNORÉE ]).
+    """
+    try:
+        portfolio_url = load_profile().get("personal_info", {}).get("links", {}).get("portfolio", "https://portfolio-pro-fraid.vercel.app/de")
+
+        new_buttons = [
+            [{"text": action_button_text, "callback_data": "noop"}]
+        ]
+        second_row = []
+        if target_url:
+            second_row.append({"text": "🌐 VOIR L'OFFRE EN LIGNE", "url": target_url})
+        if portfolio_url:
+            second_row.append({"text": "💻 MON PORTFOLIO", "url": portfolio_url})
+        if second_row:
+            new_buttons.append(second_row)
+
+        reply_markup = {"inline_keyboard": new_buttons}
+
+        if msg.get("text"):
+            original_text = msg["text"]
+            # Remplacement de la ligne Statut
+            updated_text = re.sub(
+                r'📄\s*Statut\s*:\s*[^\n]+',
+                f'📄 Statut     : {new_status}',
+                original_text
+            )
+            if updated_text == original_text:
+                lines = []
+                found = False
+                for l in original_text.splitlines():
+                    if "Statut" in l:
+                        lines.append(f"📄 Statut     : {new_status}")
+                        found = True
+                    else:
+                        lines.append(l)
+                if found:
+                    updated_text = "\n".join(lines)
+
+            telegram_api(token, "editMessageText", {
+                "chat_id": chat_id,
+                "message_id": msg["message_id"],
+                "text": updated_text,
+                "reply_markup": reply_markup
+            })
+        elif msg.get("caption"):
+            telegram_api(token, "editMessageCaption", {
+                "chat_id": chat_id,
+                "message_id": msg["message_id"],
+                "caption": msg["caption"],
+                "reply_markup": reply_markup
+            })
+        else:
+            telegram_api(token, "editMessageReplyMarkup", {
+                "chat_id": chat_id,
+                "message_id": msg["message_id"],
+                "reply_markup": reply_markup
+            })
+    except Exception as err:
+        print(f"[EDIT MESSAGE ERROR] {err}", flush=True)
+
+
 def send_telegram_photo(token, chat_id, photo_path, caption):
     """Envoie une capture d'écran de preuve vers Telegram."""
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
@@ -224,15 +378,19 @@ def send_telegram_document(token, chat_id, doc_path, caption):
         with open(doc_path, "rb") as f:
             file_data = f.read()
 
+        clean_caption = (caption or "")[:1000]
         body = bytearray()
         body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{chat_id}\r\n".encode("utf-8"))
-        body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption}\r\n".encode("utf-8"))
+        body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{clean_caption}\r\n".encode("utf-8"))
         body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"document\"; filename=\"{Path(doc_path).name}\"\r\nContent-Type: application/pdf\r\n\r\n".encode("utf-8"))
         body.extend(file_data)
         body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
 
         req = urllib.request.Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
-        urllib.request.urlopen(req, timeout=35)
+        with urllib.request.urlopen(req, timeout=35) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        if not result.get("ok"):
+            raise RuntimeError(result.get("description", "Telegram a refusé le document PDF"))
         print("  ✓ Document PDF envoyé sur ton Telegram avec succès !", flush=True)
     except Exception as e:
         print(f"[ERREUR ENVOI DOCUMENT] {e}", flush=True)
@@ -653,7 +811,96 @@ def execute_playwright_application(url, token, chat_id, job_title="Offre d'emplo
                     browser_fallback.close()
             except Exception:
                 pass
-            print("🔒 Session Playwright terminée. En attente du prochain ordre...", flush=True)
+def process_url_and_launch(detected_url, token, chat_id, profile):
+    """
+    Traite une URL d'offre reçue sur Telegram de façon 100% asynchrone et résiliente :
+    1. Vérifie si une lettre existe déjà en cache pour cette offre.
+    2. Extrait le contenu de la page (HTTP ou Playwright headless).
+    3. Rédige un Anschreiben DIN 5008 personnalisé avec Gemini.
+    4. Compile et envoie le PDF DIN 5008 sur Telegram.
+    5. Lance Chromium en plein écran (Playwright) sur l'écran du PC.
+    6. En cas d'erreur ou blocage anti-bot, ouvre QUAND MÊME Chromium avec notification.
+    """
+    global LAST_PENDING_JOB
+    job_title = "Offre d'emploi"
+    company_name = "Unternehmen"
+    anschreiben = None
+
+    try:
+        # Vérifier si on a un Anschreiben récent en attente pour CETTE MÊME offre (ex: photo envoyée juste avant)
+        cached_url = LAST_PENDING_JOB.get("apply_url")
+        has_cached_letter = bool(
+            LAST_PENDING_JOB.get("anschreiben") and 
+            (time.time() - LAST_PENDING_JOB.get("timestamp", 0) < 300) and
+            (cached_url == detected_url or not cached_url)
+        )
+
+        if has_cached_letter:
+            job_title = LAST_PENDING_JOB.get("job_title", "Offre d'emploi")
+            company_name = LAST_PENDING_JOB.get("company_name", "Unternehmen")
+            anschreiben = LAST_PENDING_JOB.get("anschreiben")
+            print(f"  ✓ Utilisation de la lettre en mémoire pour {job_title} ({company_name})", flush=True)
+            send_telegram_message(
+                token, chat_id,
+                f"🔗 Lien reçu ! Utilisation de l'Anschreiben déjà prêt pour **{job_title}** ({company_name}).\n🚀 Lancement de Chromium sur ton écran..."
+            )
+        else:
+            send_telegram_message(token, chat_id, "🔎 [1/3] Analyse du lien et extraction de l'offre...")
+            page_text = extract_text_from_url(detected_url)
+
+            send_telegram_message(token, chat_id, "🧠 [2/3] Cerveau IA : Rédaction de l'Anschreiben allemand DIN 5008...")
+            res = analyze_job_with_gemini(
+                text_content=page_text if page_text else f"Offre d'emploi à l'URL : {detected_url}",
+                profile=profile
+            )
+            job_title = res.get("job_title", "Offre d'emploi")
+            company_name = res.get("company_name", "Unternehmen")
+
+            # Sécurisation contre faux titre de bot-schutz / Cloudflare
+            if any(b in (job_title or "").lower() for b in ["bot-schutz", "nicht identifizierbar", "cloudflare"]):
+                url_kw = re.search(r'/jobs/([^/?]+)', detected_url)
+                if url_kw:
+                    job_title = url_kw.group(1).replace('+', ' ').replace('-', ' ').title()
+                else:
+                    job_title = "Junior Software Developer"
+            if any(b in (company_name or "").lower() for b in ["bot-schutz", "nicht identifizierbar", "cloudflare"]):
+                company_name = "Unternehmen"
+
+            score = res.get("score", "N/A")
+            anschreiben = res.get("anschreiben", "")
+
+            # Génération et envoi du PDF DIN 5008
+            if anschreiben:
+                try:
+                    generate_anschreiben_pdf(anschreiben, job_title, company_name)
+                    anschreiben_pdf = DOCS_DIR / "anschreiben.pdf"
+                    if anschreiben_pdf.exists() and anschreiben_pdf.stat().st_size > 500:
+                        send_telegram_document(
+                            token, chat_id, anschreiben_pdf,
+                            caption=f"📄 Anschreiben DIN 5008 pour {job_title} chez {company_name}\n📊 Score IA : {score}/100"
+                        )
+                except Exception as pdf_err:
+                    print(f"⚠️ [AVERTISSEMENT] Erreur génération / envoi PDF : {pdf_err}", flush=True)
+
+            send_telegram_message(
+                token, chat_id,
+                f"🚀 [3/3] Ouverture de Chromium en plein écran sur votre PC pour **{job_title}** chez **{company_name}**..."
+            )
+
+        # Lancer la session Playwright
+        execute_playwright_application(detected_url, token, chat_id, job_title, company_name, anschreiben)
+
+    except Exception as err:
+        print(f"⚠️ [ERREUR PROCESS URL] {err}", flush=True)
+        send_telegram_message(
+            token, chat_id,
+            f"⚠️ L'analyse automatique a rencontré une particularité sur cette page ({err}).\n🚀 Ouverture directe de Chromium sur l'offre pour vous..."
+        )
+        try:
+            execute_playwright_application(detected_url, token, chat_id, job_title, company_name, None)
+        except Exception as err_playwright:
+            print(f"❌ [ERREUR PLAYWRIGHT SECOURS] {err_playwright}", flush=True)
+            send_telegram_message(token, chat_id, f"❌ Impossible d'ouvrir Chromium : {err_playwright}")
 
 def start_cockpit():
     acquire_single_instance_lock()
@@ -724,6 +971,9 @@ def start_cockpit():
                     msg = cq["message"]
 
                     now = time.time()
+                    if cq_data in ["noop", "none"] or cq_data.startswith("noop"):
+                        answer_callback(token, cq_id, "ℹ️ Cette action a déjà été enregistrée.")
+                        continue
                     if cq_data in processed_clicks and (now - processed_clicks[cq_data]) < 45:
                         answer_callback(token, cq_id, "⏳ Traitement déjà en cours sur ton PC !")
                         continue
@@ -741,11 +991,11 @@ def start_cockpit():
                         # 1. Extraire titre et entreprise
                         job_title = "Offre d'emploi"
                         company_name = "Unternehmen"
-                        msg_text = msg.get("text", "")
+                        msg_text = msg.get("text", "") or msg.get("caption", "")
                         for line in msg_text.splitlines():
                             clean = line.replace("*", "").strip()
                             if "Poste" in clean or "poste" in clean:
-                                job_title = clean.replace("📌", "").replace("Poste :", "").replace("Poste:", "").strip()
+                                job_title = clean.replace("📌", "").replace("💼", "").replace("Poste :", "").replace("Poste:", "").strip()
                             elif "Entreprise" in clean or "entreprise" in clean:
                                 company_name = clean.replace("🏢", "").replace("Entreprise :", "").replace("Entreprise:", "").strip()
 
@@ -769,48 +1019,7 @@ def start_cockpit():
                                 company_name = LAST_PENDING_JOB["company_name"]
 
                         # 3. Résoudre l'URL cible
-                        target_url = None
-                        try:
-                            # Priorité 1 : Extraire l'URL complète directement depuis les boutons du message
-                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
-                            for row in rows:
-                                for btn in row:
-                                    btn_text = btn.get("text", "").upper()
-                                    btn_url = btn.get("url")
-                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn_text and "GITHUB" not in btn_text:
-                                        target_url = btn_url
-                                        break
-                                if target_url:
-                                    break
-
-                            # Priorité 2 : Si non trouvée dans les boutons, utiliser le cache ou le slug
-                            if not target_url:
-                                slug = cq_data
-                                for prefix in ["apply:", "apply_"]:
-                                    if slug.startswith(prefix):
-                                        slug = slug[len(prefix):]
-                                slug = slug.strip()
-
-                                if slug in URL_CACHE:
-                                    target_url = URL_CACHE[slug]
-                                elif slug.startswith("http"):
-                                    target_url = slug
-                                elif slug and "arbeitnow" not in slug and "/" not in slug:
-                                    target_url = f"https://www.arbeitnow.com/view/{slug}"
-
-                            # Entités du message
-                            if not target_url:
-                                for entity in msg.get("entities", []):
-                                    if entity.get("type") == "text_link":
-                                        target_url = entity.get("url")
-                                        break
-                                    elif entity.get("type") == "url":
-                                        o = entity.get("offset", 0)
-                                        l = entity.get("length", 0)
-                                        target_url = msg_text[o:o+l].strip()
-                                        break
-                        except Exception as err:
-                            print(f"[EXTRACTION ERROR] {err}", flush=True)
+                        target_url = extract_target_url_from_callback(cq_data, msg)
 
                         if target_url:
                             print(f"🎯 URL identifiée : {target_url}", flush=True)
@@ -819,6 +1028,7 @@ def start_cockpit():
                             try:
                                 status_cache_id = f"done_{int(time.time())}"
                                 URL_CACHE[status_cache_id] = target_url
+                                portfolio_url = load_profile().get("personal_info", {}).get("links", {}).get("portfolio", "https://portfolio-pro-fraid.vercel.app/de")
                                 telegram_api(token, "editMessageReplyMarkup", {
                                     "chat_id": chat_id,
                                     "message_id": msg["message_id"],
@@ -830,7 +1040,7 @@ def start_cockpit():
                                             ],
                                             [
                                                 {"text": "🌐 VOIR L'OFFRE EN LIGNE", "url": target_url},
-                                                {"text": "💻 MON PORTFOLIO", "url": load_profile().get("personal_info", {}).get("links", {}).get("portfolio", "https://example.com/portfolio")}
+                                                {"text": "💻 MON PORTFOLIO", "url": portfolio_url}
                                             ]
                                         ]
                                     }
@@ -849,41 +1059,29 @@ def start_cockpit():
 
                     elif is_done:
                         answer_callback(token, cq_id, "✅ Mise à jour Google Sheets en cours...")
-                        target_url = None
-                        slug = cq_data
-                        for prefix in ["done:", "done_"]:
-                            if slug.startswith(prefix):
-                                slug = slug[len(prefix):]
-                        slug = slug.strip()
-
-                        if slug in URL_CACHE:
-                            target_url = URL_CACHE[slug]
-                        elif slug.startswith("http"):
-                            target_url = slug
-
-                        if not target_url:
-                            rows = msg.get("reply_markup", {}).get("inline_keyboard", [])
-                            for row in rows:
-                                for btn in row:
-                                    btn_url = btn.get("url")
-                                    if btn_url and btn_url.startswith("http") and "PORTFOLIO" not in btn.get("text", "").upper():
-                                        target_url = btn_url
-                                        break
-                                if target_url:
-                                    break
+                        target_url = extract_target_url_from_callback(cq_data, msg)
 
                         company_display = "l'offre"
-                        msg_text = msg.get("text", "")
+                        job_title = "Offre d'emploi"
+                        msg_text = msg.get("text", "") or msg.get("caption", "")
                         for line in msg_text.splitlines():
-                            if "Entreprise" in line:
-                                company_display = line.split(":", 1)[-1].strip()
-                                break
+                            clean = line.replace("*", "").strip()
+                            if "Entreprise" in clean or "entreprise" in clean:
+                                company_display = clean.split(":", 1)[-1].strip()
+                            elif "Poste" in clean or "poste" in clean:
+                                job_title = clean.replace("📌", "").replace("💼", "").replace("Poste :", "").replace("Poste:", "").strip()
 
-                        success = update_google_sheet_status_via_n8n(target_url, "Postulé")
+                        success = False
+                        if target_url:
+                            success = update_google_sheet_status_via_n8n(target_url, "Postulé")
+
+                        # Mise à jour visuelle du message Telegram
+                        update_telegram_message_status(token, chat_id, msg, "Postulé ✅", "✅ CANDIDATURE POSTULÉE", target_url)
+
                         if success:
                             send_telegram_message(
                                 token, chat_id,
-                                f"🎉 **Google Sheet actualisé avec succès !**\n🏢 Entreprise : {company_display}\n📊 Statut : **Postulé** ✅\n📅 Date : {time.strftime('%Y-%m-%d')}"
+                                f"🎉 **Google Sheet actualisé avec succès !**\n🏢 Entreprise : {company_display}\n💼 Poste : {job_title}\n📊 Statut : **Postulé** ✅\n📅 Date : {time.strftime('%Y-%m-%d')}"
                             )
                         else:
                             send_telegram_message(
@@ -893,19 +1091,45 @@ def start_cockpit():
 
                     elif is_ignore:
                         answer_callback(token, cq_id, "❌ Offre ignorée.")
-                        target_url = None
-                        slug = cq_data
-                        for prefix in ["ignore:", "ignore_"]:
-                            if slug.startswith(prefix):
-                                slug = slug[len(prefix):]
-                        slug = slug.strip()
-                        if slug in URL_CACHE:
-                            target_url = URL_CACHE[slug]
-                        elif slug.startswith("http"):
-                            target_url = slug
+                        target_url = extract_target_url_from_callback(cq_data, msg)
 
-                        update_google_sheet_status_via_n8n(target_url, "Ignoré")
-                        send_telegram_message(token, chat_id, "🗑️ Cette offre a été marquée comme **Ignorée** dans ton suivi.")
+                        company_display = "l'offre"
+                        job_title = "Offre d'emploi"
+                        msg_text = msg.get("text", "") or msg.get("caption", "")
+                        for line in msg_text.splitlines():
+                            clean = line.replace("*", "").strip()
+                            if "Entreprise" in clean or "entreprise" in clean:
+                                company_display = clean.split(":", 1)[-1].strip()
+                            elif "Poste" in clean or "poste" in clean:
+                                job_title = clean.replace("📌", "").replace("💼", "").replace("Poste :", "").replace("Poste:", "").strip()
+
+                        # 1. Mise à jour Google Sheets via n8n
+                        success = False
+                        if target_url:
+                            success = update_google_sheet_status_via_n8n(target_url, "Ignoré")
+                        else:
+                            print(f"⚠️ [IGNORE] Impossible de trouver l'URL pour cq_data='{cq_data}'", flush=True)
+
+                        # 2. Mise à jour visuelle directe sur la carte Telegram d'origine
+                        update_telegram_message_status(token, chat_id, msg, "Ignoré ❌", "❌ OFFRE IGNORÉE", target_url)
+
+                        # 3. Notification utilisateur
+                        if success:
+                            send_telegram_message(
+                                token, chat_id,
+                                f"🗑️ **Offre marquée comme Ignorée dans Google Sheets !**\n🏢 Entreprise : {company_display}\n💼 Poste : {job_title}\n📊 Statut : **Ignoré** ❌\n📅 Date : {time.strftime('%Y-%m-%d')}"
+                            )
+                        else:
+                            if target_url:
+                                send_telegram_message(
+                                    token, chat_id,
+                                    f"🗑️ Offre ignorée pour {company_display}.\n⚠️ Note : Le statut n'a pas pu être synchronisé dans Google Sheets (webhook non joignable)."
+                                )
+                            else:
+                                send_telegram_message(
+                                    token, chat_id,
+                                    f"🗑️ Offre ignorée pour {company_display}.\n⚠️ Note : Impossible de localiser l'URL de l'offre pour mettre à jour Google Sheets."
+                                )
 
                 # ==========================================================
                 # B. RÉCEPTION D'UN MESSAGE (PHOTO, TEXTE, OU LIEN)
@@ -1052,69 +1276,19 @@ def start_cockpit():
                             )
                             continue
 
-                        # b) Détecter la présence d'une URL dans le message
-                        url_match = re.search(r'(https?://[^\s<>"]+)', text)
-                        detected_url = url_match.group(1) if url_match else None
+                        # b) Détecter la présence d'une URL dans le message (brute ou entité Telegram StepStone/LinkedIn/etc.)
+                        detected_url = extract_url_from_message(msg)
 
-                        # CAS 1 : C'est un LIEN direct (court ou commande /apply)
-                        if detected_url and (len(text) < 220 or text.startswith("/apply")):
-                            print(f"\n🔗 [TELEGRAM] Lien reçu : {detected_url}", flush=True)
-
-                            # Vérifier si on a un Anschreiben récent en attente pour CETTE MÊME offre (ex: photo envoyée juste avant)
-                            cached_url = LAST_PENDING_JOB.get("apply_url")
-                            has_cached_letter = bool(
-                                LAST_PENDING_JOB.get("anschreiben") and 
-                                (time.time() - LAST_PENDING_JOB.get("timestamp", 0) < 300) and
-                                (cached_url == detected_url or not cached_url)
-                            )
-
-                            if has_cached_letter:
-                                job_title = LAST_PENDING_JOB.get("job_title", "Offre d'emploi")
-                                company_name = LAST_PENDING_JOB.get("company_name", "Unternehmen")
-                                anschreiben = LAST_PENDING_JOB.get("anschreiben")
-                                print(f"  ✓ Utilisation de la lettre en mémoire pour {job_title} ({company_name})", flush=True)
-                                send_telegram_message(token, chat_id, f"🔗 Lien reçu ! Utilisation de l'Anschreiben déjà prêt pour {job_title} ({company_name}).\n🚀 Lancement de Chromium sur ton écran...")
-                            else:
-                                send_telegram_message(token, chat_id, f"🔎 Lien reçu ! Extraction de l'offre et analyse stratégique par l'IA...")
-                                page_text = extract_text_from_url(detected_url)
-                                res = analyze_job_with_gemini(
-                                    text_content=page_text if page_text else f"Offre d'emploi à l'URL : {detected_url}",
-                                    profile=profile
-                                )
-                                job_title = res.get("job_title", "Offre d'emploi")
-                                company_name = res.get("company_name", "Unternehmen")
-
-                                # Sécurisation contre faux titre de bot-schutz / Cloudflare
-                                if any(b in (job_title or "").lower() for b in ["bot-schutz", "nicht identifizierbar", "cloudflare"]):
-                                    url_kw = re.search(r'/jobs/([^/?]+)', detected_url)
-                                    if url_kw:
-                                        job_title = url_kw.group(1).replace('+', ' ').replace('-', ' ').title()
-                                    else:
-                                        job_title = "Junior Software Developer"
-                                if any(b in (company_name or "").lower() for b in ["bot-schutz", "nicht identifizierbar", "cloudflare"]):
-                                    company_name = "Unternehmen"
-
-                                score = res.get("score", "N/A")
-                                begruendung = res.get("begruendung", "")
-                                anschreiben = res.get("anschreiben", "")
-
-                                if anschreiben:
-                                    generate_anschreiben_pdf(anschreiben, job_title, company_name)
-                                    anschreiben_pdf = DOCS_DIR / "anschreiben.pdf"
-                                    send_telegram_document(
-                                        token, chat_id, anschreiben_pdf,
-                                        caption=f"📄 Anschreiben DIN 5008 pour {job_title} chez {company_name}\n📊 Score IA : {score}/100"
-                                    )
-
-                                send_telegram_message(token, chat_id, f"🚀 Ouverture de Chromium en plein écran sur ton PC pour pré-remplir la candidature...")
-
+                        # CAS 1 : Présence d'une URL -> Traitement direct par le Copilote
+                        if detected_url:
+                            print(f"\n🔗 [TELEGRAM] Lien d'offre identifié : {detected_url}", flush=True)
                             threading.Thread(
-                                target=execute_playwright_application,
-                                args=(detected_url, token, chat_id, job_title, company_name, anschreiben),
+                                target=process_url_and_launch,
+                                args=(detected_url, token, chat_id, profile),
                                 daemon=True
                             ).start()
 
-                        # CAS 2 : C'est un TEXTE COMPLET de description d'offre (> 120 caractères)
+                        # CAS 2 : C'est un TEXTE COMPLET de description d'offre sans URL (> 120 caractères)
                         elif len(text) >= 120:
                             print(f"\n📝 [TELEGRAM] Descriptif complet d'offre reçu ({len(text)} caractères)", flush=True)
                             send_telegram_message(token, chat_id, "📝 Descriptif complet reçu ! Mon Cerveau IA analyse les exigences et rédige ton Anschreiben DIN 5008...")

@@ -35,6 +35,22 @@ PROFIL_PATH = BASE_DIR / "profil.json"
 DOCS_DIR = BASE_DIR / "documents"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
+def clean_job_title(job_title):
+    """Retire les segments entre parenthèses avant de l'afficher dans le Betreff."""
+    title = str(job_title or "")
+    cleaned = []
+    nesting_level = 0
+
+    for character in title:
+        if character == "(":
+            nesting_level += 1
+        elif character == ")" and nesting_level:
+            nesting_level -= 1
+        elif nesting_level == 0:
+            cleaned.append(character)
+
+    return re.sub(r"\s+", " ", "".join(cleaned)).strip()
+
 def load_profile():
     if not PROFIL_PATH.exists():
         print(f"[ERREUR] Le fichier {PROFIL_PATH} est introuvable.")
@@ -90,6 +106,7 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
     if "Sehr geehrte" in clean_text:
         clean_text = "Sehr geehrte" + clean_text.split("Sehr geehrte", 1)[1]
 
+    subject_job_title = clean_job_title(job_title)
     paragraphs = [p.strip() for p in clean_text.split("\n\n") if p.strip()]
     formatted_body_list = []
     for p in paragraphs:
@@ -204,7 +221,7 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
   </div>
 
   <div class="subject-block">
-    Bewerbung als {job_title}
+    Bewerbung als {subject_job_title}
   </div>
 
   <div class="body-block">
@@ -220,7 +237,7 @@ def generate_anschreiben_pdf(letter_text, job_title="Werkstudent Software Develo
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.set_content(html_content, wait_until="networkidle")
+        page.set_content(html_content, wait_until="load")
         page.pdf(
             path=str(out_pdf),
             format="A4",

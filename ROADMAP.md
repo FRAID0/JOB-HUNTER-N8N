@@ -1,102 +1,107 @@
-# 🗺️ Roadmap : Application Operating System (Job Hunter Bot)
+# 🗺️ Feuille de Route & Cahier des Charges : Autonomous Job Hunter OS
 
 > **Projet :** Système d'automatisation des candidatures tech (DACH : Allemagne 🇩🇪, Suisse 🇨🇭, Luxembourg 🇱🇺)  
-> **Candidat :** Profil Développeur Full-Stack / DevOps / Cloud (B.Sc. Angewandte Informatik)  
-> **Architecture :** n8n (Orchestrateur) + Telegram (Cockpit Décision) + FastAPI/Playwright (Bras Exécuteur) + Google Sheets (Source de Vérité)
+> **Candidat :** Wilfried Manfouo Fomekong (B.Sc. Angewandte Informatik, Hochschule Worms)  
+> **Architecture :** n8n (Orchestrateur) + Telegram (Cockpit Décision) + Playwright & Agent Engine (Bras Exécuteur) + Google Sheets (Source de Vérité)
 
 ---
 
-## 📌 1. Bilan de l'existant (MVP v1.0 — Déjà Réalisé ✅)
+## 📌 1. Bilan de l'existant (Fonctionnalités déjà Réalisées & Validées ✅)
 
-- [x] **Ingestion multi-sources :** API REST Arbeitnow (Allemagne) + API SwissDevJobs (Suisse) fusionnées via nœud `Merge`.
-- [x] **Filtrage intelligent :** Regex avancée sur les titres (`Werkstudent`, `Praktik`, `Python`, `DevOps`, `Automati`, `Software`) éliminant 84% du bruit.
-- [x] **Déduplication (Idempotence) :** Interrogation préalable de Google Sheets (`Job_Hunter_DB`) pour bloquer les doublons avant tout appel IA.
-- [x] **Moteur d'évaluation & Rédaction IA :** Modèle Groq Llama-3.1 générant le Score d'adéquation (sur 100), la justification, et un Anschreiben 100% en allemand calibré sur le standard professionnel.
-- [x] **Cockpit Telegram interactif :** Envoi d'alertes enrichies avec boutons tactiles (`[ 🚀 POSTULER ]`, `[ ❌ IGNORER ]`, `[ 🌐 VOIR L'OFFRE ]`, `[ 💻 PORTFOLIO ]`).
-- [x] **Worker Playwright Local :** Environnement virtuel Python (`venv`), API FastAPI (`worker_api.py`), profil candidat centralisé (`profil.json`), gestion des cookies, mapping sémantique des champs et téléversement de documents.
+- [x] **Ingestion multi-sources :**
+  - **Arbeitnow API** (Allemagne / Tech européenne).
+  - **SwissDevJobs API** (Marché suisse).
+  - **Bundesagentur für Arbeit (BA)** : API REST officielle intégrée dans n8n (`JOB Bundesagentur für Arbeit` ➔ `Split BA` ➔ `Format BA` ➔ `Merge All Sources`).
+- [x] **Filtrage intelligent & Niveau d'études :** Regex éliminant >85% du bruit, excluant les formations initiales (*Ausbildung / Azubi*) pour cibler les profils universitaires (*Junior, Werkstudent, Praktikant, Master*).
+- [x] **Déduplication (Idempotence) :** Requête préalable dans Google Sheets (`Job_Hunter_DB`) pour bloquer les doublons avant tout appel LLM.
+- [x] **Génération d'Anschreiben DIN 5008 :** Rédaction par LLM selon la norme allemande stricte et compilation automatique en PDF officiel (`anschreiben.pdf`).
+- [x] **Cockpit Telegram Mobile & Synchro Google Sheets (Validé le 21.10.2026) :**
+  - Réception d'alertes enrichies avec boutons tactiles (`[ 🚀 POSTULER ]`, `[ ❌ IGNORER ]`, `[ 🌐 VOIR L'OFFRE ]`).
+  - Extraction d'URL universelle (boutons n8n, cache, texte).
+  - Clic sur **`[ ❌ IGNORER ]`** : Mise à jour visuelle immédiate de la carte Telegram (`📄 Statut : Ignoré ❌`) et mise à jour de la ligne Google Sheets via webhook n8n (`/webhook/update-job-status`).
+  - Clic sur **`[ ✅ MARQUER COMME POSTULÉ ]`** : Mise à jour visuelle et passage du statut à `Postulé`.
+  - Protection anti-doublon (verrou réseau `58941`) pour empêcher les instances concurrentes.
+- [x] **Agent Autonome Playwright & ATS Fast-Path :**
+  - Détection et pré-remplissage des formulaires Personio, Greenhouse, Workday.
+  - Résolution des modèles Gemini fiabilisée (`gemini-flash-latest` prioritaire, suppression des 404).
+  - **TerminalGuard (Sécurité Human-in-the-Loop)** : Blocage systématique avant le bouton final de soumission pour validation humaine.
+  - Capture d'écran de preuve envoyée automatiquement sur Telegram.
 
 ---
 
-## 🔴 2. MUST-HAVE (Priorité 0 — À verrouiller pour la mise en production)
+## 🔴 2. BUGS & REMARQUES À RÉGLER À LA PROCHAINE SESSION (Priorité Immédiate ⚠️)
 
-Ces éléments sont indispensables pour rendre le système 100% opérationnel et sécurisé au quotidien :
+> **Note :** Session mise en pause. À traiter en priorité avant toute nouvelle fonctionnalité.
 
-### 1. Boucler le clic Telegram avec l'API Playwright
-- **Objectif :** Créer le workflow 2 dans n8n : `Telegram Trigger (Callback Query)` $\to$ `HTTP Request (POST http://host.docker.internal:8000/apply)`.
-- **Résultat :** Dès que tu tapes sur `[ 🚀 POSTULER ]` sur ton smartphone, Chrome s'ouvre sur ton PC et commence à remplir le formulaire.
+### 1. Régularisation des documents officiels dans `documents/` & `profil.json`
+- [ ] **Titre de séjour / Aufenthaltstitel** : `documents.aufenthaltstitel` dans `profil.json` pointe actuellement en doublon sur la `Studienbescheinigung`. Déposer le vrai document PDF du titre de séjour (`documents/aufenthaltstitel.pdf`) et mettre à jour le chemin dans `profil.json`.
+- [ ] **Espace dans le nom de fichier** : Supprimer l'espace dans `documents/Studienbescheinigung .pdf` ➔ renommer proprement en `documents/studienbescheinigung.pdf` et actualiser `profil.json`.
+- [ ] **Harmonisation des noms de fichiers** :
+  - `FRAID Fomekong (1).pdf` ➔ renommer en `documents/arbeitszeugnis_pwo.pdf`.
+  - `studiengang_Notenspiegel.pdf` ➔ renommer en `documents/notenspiegel.pdf`.
 
-### 2. Dépôt physique de tes documents officiels
-- **Objectif :** Placer tes 5 vrais PDF dans `d:\N8N\documents\` :
-  - `cv.pdf`
-  - `notenspiegel.pdf`
-  - `immatrikulationsbescheinigung.pdf`
-  - `praktikumszeugnis_pwo.pdf`
-  - `aufenthaltstitel.pdf`
+### 2. Answer Engine & Consentements ATS (Greenhouse / Decathlon)
+- [ ] **Résolution des cases RGPD / Consentement** :
+  - Lors du test sur Decathlon (Greenhouse), l'agent a échoué sur :
+    `Executor failed: Failed executing ActionType.SELECT on element: Could not find matching option for 'Ich habe die Datenschutzerklärung gelesen' / 'J'accepte'`.
+  - Adapter `agent_engine/fast_path.py` et `agent_engine/executor.py` pour détecter les sélecteurs/cases à cocher de politique de confidentialité et sélectionner automatiquement l'option d'accord.
 
 ### 3. Fact-Checking en 2 passes de l'Anschreiben (Zéro Hallucination)
-- **Objectif :** Ajouter une passe de vérification stricte dans n8n :
-  - *Pass 1 :* Rédaction de la lettre.
-  - *Pass 2 :* Vérification automatique contre `profil.json` pour garantir qu'aucune technologie ou responsabilité non exercée n'a été inventée par l'IA.
+- [ ] **Ajouter la Passe 2 dans n8n** :
+  - *Pass 1 :* Rédaction de la lettre par `Basic LLM Chain`.
+  - *Pass 2 :* Nœud de contrôle comparant la lettre générée au contenu de `profil.json` pour vérifier qu'aucune compétence ou expérience fictive n'a été insérée par l'IA.
 
-### 4. Automatisation temporelle (Schedule Trigger)
-- **Objectif :** Remplacer le déclencheur manuel par un `Schedule Trigger` qui s'exécute chaque matin à **08h00** ou toutes les 6 heures.
-
----
-
-## 🟡 3. NICE-TO-HAVE (Priorité 1 — Confort & Efficacité avancée)
-
-Fonctionnalités améliorant drastiquement l'expérience utilisateur et le taux de succès :
-
-### 1. Site Adapters spécifiques (Personio, Greenhouse, Workday)
-- **Objectif :** Créer des sous-modules Playwright spécialisés pour les 3 portails d'emploi les plus fréquents en Allemagne :
-  - `Personio` (très populaire dans les startups et PME allemandes).
-  - `Workday` (utilisé par BMW, Bosch, grands groupes).
-  - `Greenhouse / Lever`.
-
-### 2. Answer Engine (Gestion des questions récurrentes)
-- **Objectif :** Base de réponses pré-enregistrées dans `profil.json` pour répondre automatiquement aux questions pièges des formulaires :
-  - Date de disponibilité : *« Zum nächstmöglichen Zeitpunkt / ab sofort »*
-  - Statut étudiant : *« Ja, ordentlich immatrikuliert an der Hochschule Worms »*
-  - Permis de travail : *« Gültiger Aufenthaltstitel mit Arbeitserlaubnis für studentische Beschäftigung vorhanden »*
-  - Prétentions salariales pour stage : *« Nach Vereinbarung / Tarif »*
-
-### 3. Génération dynamique de PDF pour l'Anschreiben
-- **Objectif :** Convertir le texte HTML de l'Anschreiben directement en fichier PDF officiel mis en page (norme DIN 5008) pour que Playwright puisse aussi l'uploader dans le champ *« Anschreiben hochladen »*.
-
-### 4. Envoi de la capture de confirmation sur Telegram
-- **Objectif :** Après le pré-remplissage, le worker prend une capture d'écran du formulaire prêt et l'envoie sur Telegram : *« Formulaire prêt à 95% ! Vérifie ton écran. »*
+### 4. Vérification d'état du workflow n8n
+- [ ] Ouvrir l'interface n8n (`http://localhost:5678`) et confirmer que le workflow `JOB_Auto_with_Loop` est bien sur **Active / Published** (vert) pour que le déclencheur matinal de 09h00 et le webhook de statut fonctionnent en continu.
 
 ---
 
-## 🔵 4. ERWEITERUNG / EXTENSIONS FUTURES (Priorité 2 — Scale & Cloud)
+## 🟢 3. NOUVELLE SOURCE D'EMPLOI À INTÉGRER : `workingstudentjobs.de`
 
-Pour transformer ton projet en produit autonome et portable à l'échelle industrielle :
+> **Ajout planifié pour la prochaine session** (après correction des bugs ci-dessus).
 
-### 1. Déploiement Cloud 1-Clic (VPS Allemand / Hetzner)
-- **Objectif :** Migrer n8n et le worker Playwright sur un petit serveur VPS en Allemagne via `Dockerfile.worker` et `docker-compose.yml`.
-- **Mode Headless :** Le bot tourne sans écran 24/7 et tout se pilote depuis Telegram.
+### Présentation de la source
+- **Plateforme :** [workingstudentjobs.de](https://www.workingstudentjobs.de/) (dédiée spécifiquement aux offres de *Werkstudent* et *Praktikum* en Allemagne).
+- **Type d'intégration :** API REST officielle publique, gratuite, retour JSON, **sans clé API ni inscription requise** (documentation publiée en bêta le 17 octobre 2026).
+- **Documentation développeur :** [https://www.workingstudentjobs.de/de/developers](https://www.workingstudentjobs.de/de/developers)
 
-### 2. Mode Manuel par Commande Telegram (`/add <URL>`)
-- **Objectif :** Quand tu tombes toi-même sur une annonce LinkedIn ou StepStone sur ton téléphone :
-  - Tu partages le lien à ton bot Telegram : `/add https://...`
-  - Le bot scrape l'offre, l'évalue, génère le dossier et te renvoie les boutons de candidature.
+### Spécifications techniques du nœud n8n à créer
+- **Type de nœud :** `n8n-nodes-base.httpRequest`
+- **Méthode :** `GET`
+- **URL :** `https://www.workingstudentjobs.de/api/v1/jobs`
+- **Format de réponse :** `JSON`
+- **Query Parameters :**
+  | Paramètre | Valeur recommandée | Description |
+  | :--- | :--- | :--- |
+  | `type` | `working_student,internship` | Offres étudiants & stages uniquement |
+  | `field` | `tech,engineering,operations` | Domaines tech, informatique, ingénierie |
+  | `limit` | `100` | Nombre d'offres récupérées |
+  | `ref` | `fraid_n8n` | Identifiant d'origine documenté |
 
-### 3. Migration Base de données vers PostgreSQL
-- **Objectif :** Remplacer Google Sheets par une vraie base PostgreSQL (déjà intégrable dans Docker Compose) avec historique complet des candidatures, journal d'événements et métriques de conversion.
-
-### 4. Lifecycle & Relances automatiques (Application Monitor)
-- **Objectif :** 
-  - Détection automatique des e-mails de refus ou d'invitation à un entretien via Gmail Trigger.
-  - Alerte de relance automatique à J+14 sur Telegram si aucune réponse n'a été reçue.
+### Tâches d'intégration n8n :
+1. Ajouter le nœud HTTP Request `JOB WorkingStudentJobs` branché sur le `Schedule Trigger`.
+2. Normaliser les données (titre, entreprise, localisation, URL, compétences) via un nœud Code JavaScript / Edit Fields.
+3. Raccorder au nœud `Merge All Sources`.
+4. Appliquer le filtre géographique (Rhénanie-Palatinat, Bade-Wurtemberg, rayon autour de Worms).
 
 ---
 
-## 📅 Ordre d'Exécution Recommandé
+## 🟡 4. NICE-TO-HAVE & EXTENSIONS FUTURES (Priorité 2)
 
-| Phase | Tâche | Durée estimée | Impact |
-| :--- | :--- | :--- | :--- |
-| **Phase 1** | Lier le bouton Telegram au Worker Playwright (`Action Telegram`) | 15 min | 🔥 Immédiat |
-| **Phase 2** | Déposer tes 5 PDF dans `documents/` et tester 1 remplissage réel | 10 min | 🔥 Immédiat |
-| **Phase 3** | Configurer le `Schedule Trigger` (08h00 quotidien) | 5 min | 🚀 Autonomie |
-| **Phase 4** | Implémenter l'Answer Engine dans `worker_api.py` | 30 min | ⚡ Gain de temps |
-| **Phase 5** | Containeriser avec `Dockerfile.worker` pour le Cloud | Plus tard | ☁️ Scalabilité |
+- [ ] **Déploiement Cloud / VPS (Hetzner Allemagne)** : Conteneurisation avec `Dockerfile.worker` et `docker-compose.yml` pour fonctionnement 24/7 sans dépendre du PC local.
+- [ ] **Lifecycle & Relances automatiques (Application Monitor)** :
+  - Surveillance des réponses employeurs via Gmail Trigger (détection refus / entretien).
+  - Alerte Telegram automatique de relance à J+14 si aucune réponse.
+- [ ] **Migration Base de données** : Passage éventuel de Google Sheets à PostgreSQL pour historique complet à long terme.
+
+---
+
+## 📅 Ordre d'Exécution de la Prochaine Session
+
+```mermaid
+flowchart TD
+    A["1. Dépôt & renommage propre des PDF (documents/)"] --> B["2. Fix Fast-Path RGPD / Consentement ATS"]
+    B --> C["3. Ajout Fact-Checking Passe 2 dans n8n"]
+    C --> D["4. Intégration de l'API workingstudentjobs.de dans n8n"]
+    D --> E["5. Test complet E2E : Ingestion ➔ Telegram ➔ Playwright"]
+```
